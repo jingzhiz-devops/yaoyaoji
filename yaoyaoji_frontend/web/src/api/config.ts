@@ -1,0 +1,61 @@
+/**
+ * API 配置文件
+ */
+import axios from 'axios'
+import type { AxiosInstance } from 'axios'
+import { ElMessage } from 'element-plus'
+
+export const API_BASE_URL = 'http://localhost:8000/api'
+
+const service: AxiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 15000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
+
+service.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
+
+service.interceptors.response.use(
+  (response) => {
+    return response.data
+  },
+  (error) => {
+    // 打印详细错误信息供调试
+    console.error('API 错误:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message
+    })
+
+    if (error.response) {
+      const { status } = error.response
+      // 401错误自动跳转登录，但不显示错误消息（由页面处理）
+      if (status === 401 && window.location.pathname !== '/login') {
+        localStorage.removeItem('token')
+        window.location.href = '/login'
+      }
+      // 其他错误不在这里处理，由各个页面自己处理
+    } else if (error.request) {
+      // 请求已发出但没有收到响应
+      console.error('网络错误: 无法连接到后端服务器')
+    }
+    return Promise.reject(error)
+  }
+)
+
+export default service
