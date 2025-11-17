@@ -9,7 +9,7 @@
       <template #header>
         <div style="display: flex; align-items: center; gap: 10px;">
           <span>🧠 AI 智能预测</span>
-          <el-tag type="warning" size="small">功能开发中</el-tag>
+          <el-tag type="success" size="small">已接入DeepSeek</el-tag>
         </div>
       </template>
       <el-form>
@@ -38,19 +38,34 @@
         </el-form-item>
       </el-form>
 
-      <!-- AI 建议结果 -->
+      <!-- 加载中状态 -->
+      <div v-if="aiPredicting" class="ai-loading">
+        <el-progress :percentage="loadingProgress" :stroke-width="8" status="success">
+          <template #default="{ percentage }">
+            <span class="loading-text">🧬 AI 医生分析中... {{ percentage }}%</span>
+          </template>
+        </el-progress>
+        <div class="loading-tips">
+          <el-icon class="is-loading" :size="20" color="#409eff" style="margin-right: 8px;">
+            <Loading />
+          </el-icon>
+          <span>正在调用 DeepSeek AI 进行智能分析，请稍候...</span>
+        </div>
+      </div>
+      
       <el-alert
         v-if="aiSuggestion"
         type="success"
         :closable="false"
-        style="margin-top: 20px;"
+        class="ai-suggestion-card"
       >
         <template #title>
-          <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">
-            👨‍⚕️ AI 区生建议
+          <div class="ai-suggestion-header">
+            <span class="ai-suggestion-title">👨‍⚕️ AI 医生建议</span>
+            <el-tag type="success" size="small">DeepSeek AI</el-tag>
           </div>
         </template>
-        <div style="line-height: 1.8; white-space: pre-wrap;">{{ aiSuggestion }}</div>
+        <div class="ai-suggestion-content" v-html="formatAISuggestion(aiSuggestion)"></div>
       </el-alert>
 
       <el-alert
@@ -68,215 +83,85 @@
 
     <el-card class="search-card">
       <template #header>
-        <span>查询药品</span>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span>💊 查询药品</span>
+          <el-tag type="warning" size="small">AI 智能查询</el-tag>
+        </div>
       </template>
       <el-form :inline="true">
-        <el-form-item label="查询药品">
+        <el-form-item label="药品名称">
           <el-input
             v-model="searchQuery"
-            placeholder="请输入药品名称（支持模糊，如：芬缓）"
-            style="width: 300px"
+            placeholder="请输入药品名称（如：阿莫西林、布洛芬）"
+            style="width: 500px"
             clearable
             @keyup.enter="handleSearch"
           >
             <template #append>
-              <el-button :icon="Search" @click="handleSearch" :loading="searching">查询</el-button>
+              <el-button :icon="Search" @click="handleSearch" :loading="aiMedicineQuerying">
+                AI 查询
+              </el-button>
             </template>
           </el-input>
         </el-form-item>
       </el-form>
     </el-card>
 
-    <el-card v-if="medicineResults.length > 0" class="result-card" style="margin-top: 20px;">
+    <!-- AI 药品查询结果 -->
+    <el-card v-if="aiMedicineResult" class="ai-result-card" style="margin-top: 20px;">
       <template #header>
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span>药品搜索结果</span>
-          <el-tag type="info">共 {{ medicineResults.length }} 条</el-tag>
+          <span style="font-size: 18px; font-weight: bold;">💊 AI 药品查询结果</span>
+          <el-tag type="warning">DeepSeek AI</el-tag>
         </div>
       </template>
-      <el-tag
-        v-for="m in medicineResults"
-        :key="m.id"
-        style="margin-right: 8px; margin-bottom: 8px; cursor: pointer;"
-        @click="currentMedicine = m"
-      >
-        {{ m.name }}<span v-if="m.generic_name">（{{ m.generic_name }}）</span>
-      </el-tag>
+      <div class="ai-suggestion-content" v-html="formatAISuggestion(aiMedicineResult)"></div>
     </el-card>
 
     <el-card class="search-card" style="margin-top: 20px;">
       <template #header>
-        <span>查询疾病</span>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span>🏥 查询疾病</span>
+          <el-tag type="warning" size="small">AI 智能查询</el-tag>
+        </div>
       </template>
       <el-form :inline="true">
         <el-form-item label="疾病名称">
           <el-input
             v-model="diseaseQuery"
-            placeholder="请输入疾病名称（支持模糊）"
-            style="width: 280px"
+            placeholder="请输入疾病名称（如：感冒、高血压）"
+            style="width: 500px"
             clearable
             @keyup.enter="handleDiseaseSearch"
           >
             <template #append>
-              <el-button :icon="Search" @click="handleDiseaseSearch" :loading="dSearching">查询</el-button>
-            </template>
-          </el-input>
-        </el-form-item>
-        <el-form-item label="药品名称">
-          <el-input
-            v-model="medicineQueryForDisease"
-            placeholder="输入药品名查询相关疾病"
-            style="width: 280px"
-            clearable
-            @keyup.enter="handleDiseaseSearchByMedicine"
-          >
-            <template #append>
-              <el-button :icon="Search" @click="handleDiseaseSearchByMedicine" :loading="dSearching">反查</el-button>
+              <el-button :icon="Search" @click="handleDiseaseSearch" :loading="aiDiseaseQuerying">
+                AI 查询
+              </el-button>
             </template>
           </el-input>
         </el-form-item>
       </el-form>
     </el-card>
 
-    <el-card v-if="diseaseResults.length > 0" class="result-card" style="margin-top: 20px;">
+    <!-- AI 疾病查询结果 -->
+    <el-card v-if="aiDiseaseResult" class="ai-result-card" style="margin-top: 20px;">
       <template #header>
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span>疾病搜索结果</span>
-          <el-tag type="info">共 {{ diseaseResults.length }} 条</el-tag>
+          <span style="font-size: 18px; font-weight: bold;">🏥 AI 疾病查询结果</span>
+          <el-tag type="warning">DeepSeek AI</el-tag>
         </div>
       </template>
-      <el-tag
-        v-for="d in diseaseResults"
-        :key="d.id || d.name"
-        style="margin-right: 8px; margin-bottom: 8px; cursor: pointer;"
-        @click="currentDisease = d"
-      >
-        {{ d.name }}
-      </el-tag>
-    </el-card>
-
-    <el-card v-if="currentDisease" class="result-card" style="margin-top: 10px;">
-      <template #header>
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="font-size: 18px; font-weight: bold;">疾病详情</span>
-          <el-tag type="info">{{ currentDisease.name }}</el-tag>
-        </div>
-      </template>
-      <el-descriptions :column="1" border>
-        <el-descriptions-item label="别名" v-if="parseList(currentDisease.aliases).length">
-          <el-tag v-for="a in parseList(currentDisease.aliases)" :key="a" style="margin-right: 6px;">{{ a }}</el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="简介">{{ currentDisease.description }}</el-descriptions-item>
-        <el-descriptions-item label="常用药物" v-if="parseList(currentDisease.recommended).length">
-          <el-tag type="success" v-for="m in parseList(currentDisease.recommended)" :key="m" style="margin-right: 6px;">{{ m }}</el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="避免搭配" v-if="parseList(currentDisease.avoid).length">
-          <el-tag type="danger" v-for="x in parseList(currentDisease.avoid)" :key="x" style="margin-right: 6px;">{{ x }}</el-tag>
-        </el-descriptions-item>
-      </el-descriptions>
-    </el-card
-
-    <!-- 查询结果 -->
-    <el-card v-if="currentMedicine" class="result-card" style="margin-top: 20px;">
-      <template #header>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-size: 20px; font-weight: bold;">{{ currentMedicine.name }}</span>
-          <el-tag type="success" v-if="currentMedicine.generic_name">{{ currentMedicine.generic_name }}</el-tag>
-        </div>
-      </template>
-
-      <el-descriptions :column="1" border>
-        <el-descriptions-item label="药品名称">
-          <span style="font-size: 16px; font-weight: bold;">{{ currentMedicine.name }}</span>
-        </el-descriptions-item>
-        
-        <el-descriptions-item label="通用名" v-if="currentMedicine.generic_name">
-          {{ currentMedicine.generic_name }}
-        </el-descriptions-item>
-
-        <el-descriptions-item label="生产厂家" v-if="currentMedicine.manufacturer">
-          {{ currentMedicine.manufacturer }}
-        </el-descriptions-item>
-
-        <el-descriptions-item label="主要成分">
-          <el-tag type="info" style="margin-right: 5px;" v-for="(ingredient, index) in parseIngredients(currentMedicine)" :key="index">
-            {{ ingredient }}
-          </el-tag>
-          <span v-if="!currentMedicine.ingredients" style="color: #909399;">暂无成分信息</span>
-        </el-descriptions-item>
-
-        <el-descriptions-item label="功效与作用">
-          <div style="line-height: 1.8;">
-            {{ currentMedicine.efficacy || '暂无功效信息' }}
-          </div>
-        </el-descriptions-item>
-
-        <el-descriptions-item label="禁忌信息">
-          <el-alert
-            :title="currentMedicine.contraindications || '暂无禁忌信息'"
-            type="warning"
-            :closable="false"
-            show-icon
-          />
-        </el-descriptions-item>
-
-        <el-descriptions-item label="副作用">
-          <div style="line-height: 1.8;">
-            {{ currentMedicine.side_effects || '暂无副作用信息' }}
-          </div>
-        </el-descriptions-item>
-
-        <el-descriptions-item label="不能搭配服用">
-          <el-alert
-            v-if="conflicts.length > 0"
-            type="error"
-            :closable="false"
-            show-icon
-          >
-            <template #title>
-              <div v-for="conflict in conflicts" :key="conflict.medicine_2" style="margin-bottom: 10px;">
-                <strong>{{ conflict.medicine_2 }}</strong>: {{ conflict.warning }}
-              </div>
-            </template>
-          </el-alert>
-          <span v-else style="color: #67c23a;">✓ 暂无已知药物冲突</span>
-        </el-descriptions-item>
-      </el-descriptions>
-
-      <div style="margin-top: 20px; text-align: right;">
-        <el-button type="primary" @click="addToBox" v-if="!isInBox">添加到药箱</el-button>
-        <el-button type="info" disabled v-else>已在药箱中</el-button>
-      </div>
-    </el-card>
-
-    <!-- 空状态 -->
-    <el-empty v-if="!currentMedicine && !searching" description="请输入药品名称进行查询" />
-
-    <!-- 历史查询记录 -->
-    <el-card v-if="searchHistory.length > 0" style="margin-top: 20px;">
-      <template #header>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span>最近查询</span>
-          <el-button size="small" text @click="clearHistory">清空</el-button>
-        </div>
-      </template>
-      <el-tag
-        v-for="item in searchHistory"
-        :key="item"
-        style="margin-right: 10px; margin-bottom: 10px; cursor: pointer;"
-        @click="searchQuery = item; handleSearch()"
-      >
-        {{ item }}
-      </el-tag>
+      <div class="ai-suggestion-content" v-html="formatAISuggestion(aiDiseaseResult)"></div>
     </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Search } from '@element-plus/icons-vue'
+import { Search, Loading } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { medicineAPI, userMedicationAPI, diseaseAPI } from '@/api'
+import { medicineAPI, userMedicationAPI, diseaseAPI, aiDoctorAPI } from '@/api'
 import { useMedicationStore } from '@/stores/medication'
 
 const medicationStore = useMedicationStore()
@@ -284,18 +169,22 @@ const searchQuery = ref('')
 const searching = ref(false)
 const currentMedicine = ref<any>(null)
 const diseaseQuery = ref('')
-const medicineQueryForDisease = ref('')
 const searchHistory = ref<string[]>([])
 const conflicts = ref<any[]>([])
-const dSearching = ref(false)
-const diseaseResults = ref<any[]>([])
-const medicineResults = ref<any[]>([])
-const currentDisease = ref<any>(null)
 
 // AI 预测相关状态
 const symptomDescription = ref('')
 const aiPredicting = ref(false)
 const aiSuggestion = ref<string | null>(null)
+const loadingProgress = ref(0)
+
+// AI 药品查询状态
+const aiMedicineQuerying = ref(false)
+const aiMedicineResult = ref<string | null>(null)
+
+// AI 疾病查询状态
+const aiDiseaseQuerying = ref(false)
+const aiDiseaseResult = ref<string | null>(null)
 
 // 检查是否已在药箱中
 const isInBox = computed(() => {
@@ -311,101 +200,18 @@ async function handleSearch() {
     return
   }
 
-  searching.value = true
-  try {
-    const data: any = await medicineAPI.list({ search: searchQuery.value })
-    medicineResults.value = Array.isArray(data) ? data : []
-
-    // 客户端兜底：若服务端未命中，再全量拉取后前端模糊匹配
-    if (medicineResults.value.length === 0) {
-      const all: any = await medicineAPI.list()
-      const q = searchQuery.value.trim()
-      medicineResults.value = (Array.isArray(all) ? all : []).filter((m: any) => {
-        const hay = [m.name, m.generic_name, m.manufacturer, m.ingredients, m.efficacy, m.contraindications]
-          .filter(Boolean)
-          .join(' ')
-        return hay.includes(q)
-      })
-    }
-
-    if (medicineResults.value.length > 0) {
-      currentMedicine.value = medicineResults.value[0]
-      if (!searchHistory.value.includes(searchQuery.value)) {
-        searchHistory.value.unshift(searchQuery.value)
-        if (searchHistory.value.length > 5) searchHistory.value.pop()
-      }
-      await checkConflicts()
-    } else {
-      ElMessage.warning('未找到该药品信息')
-      currentMedicine.value = null
-    }
-  } catch (error: any) {
-    console.error('❌ 药品查询错误:', error)
-    ElMessage.error('查询失败：' + (error.response?.data?.detail || error.message))
-  } finally {
-    searching.value = false
-  }
+  // 直接使用 AI 查询
+  await handleAIMedicineQuery()
 }
 
 async function handleDiseaseSearch() {
-  if (!diseaseQuery.value.trim()) return
-  dSearching.value = true
-  try {
-    let data: any = await diseaseAPI.list({ search: diseaseQuery.value })
-    diseaseResults.value = Array.isArray(data) ? data : []
-
-    // 客户端兜底：若服务端未命中，再全量拉取后前端模糊匹配（名称/别名/简介）
-    if (diseaseResults.value.length === 0) {
-      data = await diseaseAPI.list()
-      const q = diseaseQuery.value.trim()
-      diseaseResults.value = (Array.isArray(data) ? data : []).filter((d: any) => {
-        const hay = [d.name, d.aliases, d.description].filter(Boolean).join(' ')
-        return hay.includes(q)
-      })
-    }
-
-    currentDisease.value = diseaseResults.value[0] || null
-  } catch (e) {
-    console.error('❌ 疾病查询错误:', e)
-  } finally {
-    dSearching.value = false
-  }
-}
-
-async function handleDiseaseSearchByMedicine() {
-  if (!medicineQueryForDisease.value.trim()) {
-    ElMessage.warning('请输入药品名称')
+  if (!diseaseQuery.value.trim()) {
+    ElMessage.warning('请输入疾病名称')
     return
   }
   
-  dSearching.value = true
-  try {
-    let data: any = await diseaseAPI.list({ medicine_name: medicineQueryForDisease.value })
-    diseaseResults.value = Array.isArray(data) ? data : []
-
-    // 客户端兜底：若服务端未命中，再全量拉取后在推荐药物字段中模糊匹配
-    if (diseaseResults.value.length === 0) {
-      data = await diseaseAPI.list()
-      const q = medicineQueryForDisease.value.trim()
-      diseaseResults.value = (Array.isArray(data) ? data : []).filter((d: any) => {
-        const recommended = d.recommended || ''
-        return recommended.includes(q)
-      })
-    }
-
-    if (diseaseResults.value.length > 0) {
-      currentDisease.value = diseaseResults.value[0]
-      ElMessage.success(`找到 ${diseaseResults.value.length} 个相关疾病`)
-    } else {
-      ElMessage.warning(`未找到使用「${medicineQueryForDisease.value}」的相关疾病`)
-      currentDisease.value = null
-    }
-  } catch (e) {
-    console.error('❌ 药品反查疾病错误:', e)
-    ElMessage.error('查询失败')
-  } finally {
-    dSearching.value = false
-  }
+  // 直接使用 AI 查询
+  await handleAIDiseaseQuery()
 }
 
 async function checkConflicts() {
@@ -459,43 +265,113 @@ async function handleAIPredict() {
 
   aiPredicting.value = true
   aiSuggestion.value = null
+  loadingProgress.value = 0
+
+  const progressInterval = setInterval(() => {
+    if (loadingProgress.value < 90) {
+      loadingProgress.value += Math.random() * 15
+      if (loadingProgress.value > 90) loadingProgress.value = 90
+    }
+  }, 300)
 
   try {
-    // TODO: 这里后续接入真实的 AI API
-    // 暂时使用模拟响应
-    await new Promise(resolve => setTimeout(resolve, 1500)) // 模拟网络请求
-
-    // 模拟 AI 响应
-    aiSuggestion.value = `根据您描述的症状，AI 初步分析如下：
-
-【可能原因】
-1. 普通感冒或流感
-2. 上呼吸道感染
-3. 疾病或病毒感染
-
-【建议措施】
-1. 多休息，保证充足睡眠
-2. 多喝温水，保持水分补充
-3. 清淡饮食，避免辛辣刺激食物
-4. 可适当服用退烧药物（如对乙酰氨基酸）
-5. 注意通风，保持室内空气清新
-
-【就医建议】
-如果出现以下情况，请立即就医：
-- 体温超过39.5°C且持续不退
-- 呼吸困难或胸痛
-- 症状持续超过3天未好转
-- 出现严重头痛、喉哙剧痛等
-
-❗注意：此建议仅供参考，不代替专业医疗诊断。`
-
-    ElMessage.success('已生成 AI 医疗建议')
+    const response: any = await aiDoctorAPI.predict(symptomDescription.value.trim())
+    loadingProgress.value = 100
+    await new Promise(resolve => setTimeout(resolve, 300))
+    
+    aiSuggestion.value = response.suggestion
+    ElMessage.success('✅ 已生成 AI 医疗建议')
   } catch (error: any) {
-    console.error('❌ AI 预测错误:', error)
-    ElMessage.error('AI 预测失败，请稍后重试')
+    let errorMsg = 'AI 服务暂时不可用，请稍后重试'
+    if (error.response) {
+      const status = error.response.status
+      const detail = error.response.data?.detail
+      if (status === 404) {
+        errorMsg = '❌ AI 服务接口未找到'
+      } else if (status === 500) {
+        errorMsg = '❌ 服务器内部错误：' + (detail || '请检查后端日志')
+      } else {
+        errorMsg = detail || `服务器错误: ${status}`
+      }
+    } else if (error.request) {
+      errorMsg = '❌ 无法连接到服务器，请检查：\n1. 后端服务是否启动\n2. 网络连接是否正常\n3. 防火墙设置'
+      ElMessage({ message: errorMsg, type: 'error', duration: 5000, showClose: true })
+      return
+    }
+    ElMessage.error(errorMsg)
   } finally {
+    clearInterval(progressInterval)
     aiPredicting.value = false
+    loadingProgress.value = 0
   }
+}
+
+// AI 药品查询
+async function handleAIMedicineQuery() {
+  if (!searchQuery.value.trim()) {
+    ElMessage.warning('请输入药品名称')
+    return
+  }
+
+  aiMedicineQuerying.value = true
+  aiMedicineResult.value = null
+
+  try {
+    const response: any = await aiDoctorAPI.queryMedicine(searchQuery.value.trim())
+    aiMedicineResult.value = response.suggestion
+    ElMessage.success('✅ 已生成 AI 药品查询结果')
+  } catch (error: any) {
+    let errorMsg = 'AI 服务暂时不可用，请稍后重试'
+    if (error.response) {
+      const status = error.response.status
+      const detail = error.response.data?.detail
+      if (status === 404) errorMsg = '❌ AI 服务接口未找到'
+      else if (status === 500) errorMsg = '❌ 服务器内部错误：' + (detail || '请检查后端日志')
+      else errorMsg = detail || `服务器错误: ${status}`
+    }
+    ElMessage.error(errorMsg)
+  } finally {
+    aiMedicineQuerying.value = false
+  }
+}
+
+// AI 疾病查询
+async function handleAIDiseaseQuery() {
+  if (!diseaseQuery.value.trim()) {
+    ElMessage.warning('请输入疾病名称')
+    return
+  }
+
+  aiDiseaseQuerying.value = true
+  aiDiseaseResult.value = null
+
+  try {
+    const response: any = await aiDoctorAPI.queryDisease(diseaseQuery.value.trim())
+    aiDiseaseResult.value = response.suggestion
+    ElMessage.success('✅ 已生成 AI 疾病查询结果')
+  } catch (error: any) {
+    let errorMsg = 'AI 服务暂时不可用，请稍后重试'
+    if (error.response) {
+      const status = error.response.status
+      const detail = error.response.data?.detail
+      if (status === 404) errorMsg = '❌ AI 服务接口未找到'
+      else if (status === 500) errorMsg = '❌ 服务器内部错误：' + (detail || '请检查后端日志')
+      else errorMsg = detail || `服务器错误: ${status}`
+    }
+    ElMessage.error(errorMsg)
+  } finally {
+    aiDiseaseQuerying.value = false
+  }
+}
+
+// 格式化 AI 建议
+function formatAISuggestion(text: string): string {
+  if (!text) return ''
+  let formatted = text.replace(/【([^】]+)】/g, '<h3 class="ai-section-title">$1</h3>')
+  formatted = formatted.replace(/\n/g, '<br>')
+  formatted = formatted.replace(/^(\d+\.)\s/gm, '<strong class="ai-number">$1</strong> ')
+  formatted = formatted.replace(/(⚠️|❌|✅|💡|⚡)\s*([^：：<]+)/g, '<span class="ai-highlight">$1 $2</span>')
+  return formatted
 }
 </script>
 
@@ -547,5 +423,118 @@ async function handleAIPredict() {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* AI 加载状态 */
+.ai-loading {
+  margin-top: 20px;
+  padding: 30px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8f4f8 100%);
+  border-radius: 12px;
+  border: 2px solid #409eff;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(64, 158, 255, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(64, 158, 255, 0);
+  }
+}
+
+.ai-loading .loading-text {
+  font-size: 16px;
+  font-weight: bold;
+  color: #409eff;
+}
+
+.ai-loading .loading-tips {
+  margin-top: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #606266;
+}
+
+/* AI 建议卡片样式 */
+.ai-suggestion-card {
+  margin-top: 20px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(103, 194, 58, 0.15);
+  animation: fadeIn 0.5s ease-in;
+}
+
+.ai-suggestion-card :deep(.el-alert__content) {
+  width: 100%;
+}
+
+.ai-suggestion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+.ai-suggestion-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #67c23a;
+}
+
+.ai-suggestion-content {
+  line-height: 2;
+  color: #333;
+  font-size: 15px;
+  background: linear-gradient(135deg, #f9fdf6 0%, #ffffff 100%);
+  padding: 20px;
+  border-radius: 8px;
+  border-left: 4px solid #67c23a;
+}
+
+/* AI 结果卡片 */
+.ai-result-card {
+  animation: fadeIn 0.5s ease-in;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(230, 162, 60, 0.15);
+}
+
+.ai-result-card :deep(.el-card__header) {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  font-weight: bold;
+}
+
+/* AI 建议内容样式 */
+.ai-suggestion-content :deep(.ai-section-title) {
+  font-size: 16px;
+  font-weight: bold;
+  color: #409eff;
+  margin: 15px 0 10px 0;
+  padding-left: 10px;
+  border-left: 3px solid #409eff;
+  background: linear-gradient(90deg, rgba(64, 158, 255, 0.1) 0%, transparent 100%);
+  padding: 8px 0 8px 10px;
+}
+
+.ai-suggestion-content :deep(.ai-number) {
+  color: #e6a23c;
+  font-weight: bold;
+  margin-right: 5px;
+}
+
+.ai-suggestion-content :deep(.ai-highlight) {
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.15) 0%, transparent 100%);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  color: #d97706;
+  display: inline-block;
+  margin: 2px 0;
 }
 </style>

@@ -11,7 +11,11 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.database import Base, engine
 from app.models.models import (
     User, Medicine, UserMedication, 
-    MedicationSchedule, MedicationRecord, SymptomRecord
+    MedicationSchedule, MedicationRecord, SymptomRecord,
+    Disease, Family, FamilyMember, EmergencyContact,
+    HealthProfile, AllergyRecord, FamilyHistory, SurgeryRecord,
+    CheckupReport, VaccinationRecord,
+    ChatSession, ChatMessage, KnowledgeBase
 )
 
 
