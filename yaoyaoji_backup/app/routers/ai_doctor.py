@@ -11,7 +11,7 @@ from datetime import datetime
 router = APIRouter(prefix="/api/ai", tags=["AI医生"])
 
 # DeepSeek API配置
-DEEPSEEK_API_KEY = "sk-039cd2e9ea744b1fb01eb4b91e04ac53"
+DEEPSEEK_API_KEY = "sk-xxxx"
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 
 class SymptomRequest(BaseModel):
