@@ -9,7 +9,7 @@ export const API_BASE_URL = 'http://localhost:8000/api'
 
 const service: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000,
+  timeout: 60000, // 60秒超时，适配AI请求
   headers: {
     'Content-Type': 'application/json'
   }

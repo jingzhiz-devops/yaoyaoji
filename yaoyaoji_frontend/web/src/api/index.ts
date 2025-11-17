@@ -228,3 +228,18 @@ export const uploadAPI = {
   deleteMedicineImage: (filename: string) => 
     service.delete(`/upload/medicine-image/${filename}`)
 }
+
+// AI医生相关
+export const aiDoctorAPI = {
+  // AI智能医疗预测
+  predict: (symptomDescription: string) =>
+    service.post('/ai/predict', { symptom_description: symptomDescription }),
+  
+  // AI药品查询
+  queryMedicine: (medicineName: string) =>
+    service.post('/ai/query-medicine', { medicine_name: medicineName }),
+  
+  // AI疾病查询
+  queryDisease: (diseaseName: string) =>
+    service.post('/ai/query-disease', { disease_name: diseaseName })
+}
