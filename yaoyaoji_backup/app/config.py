@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24小时
     
+    # DeepSeek AI 配置
+    DEEPSEEK_API_KEY: str
+    DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
+    
     # 应用配置
     APP_NAME: str = "药药记 API"
     APP_VERSION: str = "1.0.0"
