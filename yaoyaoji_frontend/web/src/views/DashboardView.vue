@@ -1,311 +1,246 @@
 <template>
   <div class="dashboard">
     <div class="welcome-section">
-      <h1 class="welcome-title">
-        <span class="gradient-text">欢迎回来，{{ username }}</span>
-      </h1>
+      <div class="welcome-text">
+        <h1 class="welcome-title">
+          早安，{{ username }}
+        </h1>
+        <p class="welcome-subtitle">祝您今天身体健康，心情愉快</p>
+      </div>
+      <div class="welcome-decoration">
+        <!-- Abstract decoration or illustration placeholder -->
+      </div>
     </div>
 
-    <!-- 用药统计 -->
-    <el-row :gutter="20" style="margin-top: 30px">
-      <el-col :span="6">
-        <el-card class="stat-card stat-card-primary">
-          <div class="stat-content">
-            <div class="stat-icon">💊</div>
-            <div class="stat-info">
-              <div class="stat-title">我的药品</div>
-              <div class="stat-value">{{ medicationStore.myMedications.length }}</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card class="stat-card stat-card-warning">
-          <div class="stat-content">
-            <div class="stat-icon">⏰</div>
-            <div class="stat-info">
-              <div class="stat-title">今日待服药</div>
-              <div class="stat-value">{{ todayPendingCount }}</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card class="stat-card stat-card-success">
-          <div class="stat-content">
-            <div class="stat-icon">✅</div>
-            <div class="stat-info" style="width: 100%;">
-              <div class="stat-title">服药天数</div>
-              <div class="medication-days-container">
-                <div v-if="medicationScheduleDays.length > 0">
-                  <div v-for="item in medicationScheduleDays" :key="item.id" class="medication-day-item">
-                    {{ item.name }} <span style="color: #ffffff; font-weight: bold;">{{ item.days }}</span> 天
-                  </div>
-                </div>
-                <div v-else style="color: rgba(255, 255, 255, 0.7); font-size: 14px;">暂无计划</div>
-              </div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card class="stat-card stat-card-info">
-          <div class="stat-content">
-            <div class="stat-icon">📝</div>
-            <div class="stat-info">
-              <div class="stat-title">症状记录</div>
-              <div class="stat-value">{{ symptomCount }}</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <!-- 今日用药 -->
-    <el-row :gutter="20" style="margin-top: 20px">
-      <el-col :span="12">
-        <el-card header="今日用药">
-          <div v-if="todaySchedules.length > 0" style="max-height: 200px; overflow-y: auto;">
-            <div v-for="schedule in todaySchedules" :key="schedule.id" style="margin-bottom: 10px; padding: 10px; border-radius: 4px; background: #f5f7fa;">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                  <strong>{{ schedule.user_medication?.custom_name || schedule.user_medication?.medicine?.name }}</strong>
-                  <div style="font-size: 12px; color: #909399; margin-top: 5px;">
-                    <span v-for="(time, index) in schedule.scheduled_times" :key="index">
-                      <el-tag 
-                        size="small" 
-                        :type="getTimeStatus(time)" 
-                        style="margin-right: 5px;"
-                      >
-                        {{ time.substring(0, 5) }}
-                      </el-tag>
-                    </span>
-                    | {{ schedule.dose }}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <el-empty v-else description="今日暂无用药提醒" />
-        </el-card>
-      </el-col>
+    <!-- 核心指标卡片 -->
+    <div class="stats-grid">
+      <div class="stat-card primary">
+        <div class="stat-icon-wrapper">
+          <el-icon><Box /></el-icon>
+        </div>
+        <div class="stat-info">
+          <div class="stat-label">我的药品</div>
+          <div class="stat-value">{{ medicationStore.myMedications.length }}<span class="unit">种</span></div>
+        </div>
+      </div>
       
-      <el-col :span="12">
-        <el-card header="家人用药">
-          <div v-if="familyMembers.length > 0" style="max-height: 200px; overflow-y: auto;">
-            <div v-for="member in familyMembers" :key="member.user_id" style="margin-bottom: 10px; padding: 10px; border-radius: 4px; background: #f0f9ff;">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="flex: 1;">
-                  <div style="display: flex; align-items: center; gap: 8px;">
-                    <strong style="font-size: 15px;">{{ member.username }}</strong>
-                    <el-tag v-if="member.relation" size="small" type="primary">{{ member.relation }}</el-tag>
+      <div class="stat-card warning">
+        <div class="stat-icon-wrapper">
+          <el-icon><AlarmClock /></el-icon>
+        </div>
+        <div class="stat-info">
+          <div class="stat-label">今日待服</div>
+          <div class="stat-value">{{ todayPendingCount }}<span class="unit">次</span></div>
+        </div>
+      </div>
+      
+      <div class="stat-card success">
+        <div class="stat-icon-wrapper">
+          <el-icon><Calendar /></el-icon>
+        </div>
+        <div class="stat-info">
+          <div class="stat-label">坚持服药</div>
+          <div class="stat-value">
+            <span v-if="medicationScheduleDays.length > 0">{{ Math.max(...medicationScheduleDays.map(i => i.days)) }}</span>
+            <span v-else>0</span>
+            <span class="unit">天</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="stat-card info">
+        <div class="stat-icon-wrapper">
+          <el-icon><Notebook /></el-icon>
+        </div>
+        <div class="stat-info">
+          <div class="stat-label">症状记录</div>
+          <div class="stat-value">{{ symptomCount }}<span class="unit">条</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-grid">
+      <!-- 左侧主要内容 -->
+      <div class="left-column">
+        <!-- 今日用药 -->
+        <div class="content-card">
+          <div class="card-header">
+            <div class="header-title">
+              <el-icon class="header-icon"><Timer /></el-icon>
+              <span>今日用药提醒</span>
+            </div>
+            <el-button text type="primary" @click="$router.push('/schedules')">查看全部</el-button>
+          </div>
+          
+          <div class="schedule-list" v-if="todaySchedules.length > 0">
+            <div v-for="schedule in todaySchedules" :key="schedule.id" class="schedule-item">
+              <div class="schedule-time-line">
+                <div class="time-dot"></div>
+                <div class="time-line"></div>
+              </div>
+              <div class="schedule-content">
+                <div class="medicine-info">
+                  <h4>{{ schedule.user_medication?.custom_name || schedule.user_medication?.medicine?.name }}</h4>
+                  <p>{{ schedule.dose }}</p>
+                </div>
+                <div class="time-tags">
+                  <span v-for="(time, index) in schedule.scheduled_times" :key="index">
+                    <el-tag 
+                      size="small" 
+                      :type="getTimeStatus(time)" 
+                      effect="light"
+                      round
+                    >
+                      {{ time.substring(0, 5) }}
+                    </el-tag>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <el-empty v-else description="今日暂无用药提醒" :image-size="100" />
+        </div>
+
+        <!-- 家人用药 -->
+        <div class="content-card">
+          <div class="card-header">
+            <div class="header-title">
+              <el-icon class="header-icon"><UserFilled /></el-icon>
+              <span>家人健康概况</span>
+            </div>
+            <el-button text type="primary" @click="$router.push('/family')">管理家人</el-button>
+          </div>
+          
+          <div class="family-grid" v-if="familyMembers.length > 0">
+            <div v-for="member in familyMembers" :key="member.user_id" class="family-card">
+              <div class="family-info">
+                <el-avatar :size="48" class="family-avatar">
+                  {{ member.username?.charAt(0).toUpperCase() }}
+                </el-avatar>
+                <div class="family-text">
+                  <div class="name-row">
+                    <span class="name">{{ member.username }}</span>
+                    <el-tag v-if="member.relation" size="small" effect="plain" round>{{ member.relation }}</el-tag>
                   </div>
-                  <div style="font-size: 12px; color: #909399; margin-top: 5px;">
-                    <span v-if="member.medication_count > 0">
-                      💊 用药 {{ member.medication_count }} 种 | 今日 {{ member.today_schedules }} 个提醒
+                  <div class="status-text">
+                    <span v-if="member.medication_count > 0" class="active-status">
+                      正在服用 {{ member.medication_count }} 种药物
                     </span>
-                    <span v-else style="color: #c0c4cc;">暂无用药记录</span>
+                    <span v-else class="inactive-status">暂无用药</span>
                   </div>
                 </div>
-                <el-button 
-                  type="primary" 
-                  size="small" 
-                  @click="handleSwitchToMember(member)"
-                  style="margin-left: 10px;"
-                >
-                  切换
-                </el-button>
               </div>
+              <el-button 
+                type="primary" 
+                plain 
+                size="small" 
+                round
+                @click="handleSwitchToMember(member)"
+              >
+                切换视角
+              </el-button>
             </div>
           </div>
           <el-empty v-else description="暂无家庭成员" :image-size="80" />
-        </el-card>
-      </el-col>
-    </el-row>
+        </div>
+      </div>
 
-    <el-divider style="margin: 30px 0" />
+      <!-- 右侧健康档案 -->
+      <div class="right-column">
+        <div class="content-card health-profile-card">
+          <div class="card-header">
+            <div class="header-title">
+              <el-icon class="header-icon"><DataLine /></el-icon>
+              <span>健康档案摘要</span>
+            </div>
+            <el-button text type="primary" @click="$router.push('/health-profile')">详情</el-button>
+          </div>
 
-    <!-- 健康档案概览 -->
-    <el-row :gutter="20">
-      <el-col :span="8">
-        <el-card class="health-card">
-          <template #header>
-            <div class="card-header">
-              <span>🩺 基本健康信息</span>
-              <el-button text type="primary" @click="$router.push('/health-profile')">详情</el-button>
+          <div v-if="healthProfile" class="health-metrics">
+            <div class="metric-item">
+              <span class="label">BMI 指数</span>
+              <div class="value-row">
+                <span class="value" :class="getBMIClass(bmi)">{{ bmi }}</span>
+                <span class="status-badge" :class="getBMIClass(bmi)">{{ getBMIStatusText(bmi) }}</span>
+              </div>
             </div>
-          </template>
-          <div v-if="healthProfile" class="health-info">
-            <div v-if="healthProfile.real_name" class="info-row">
-              <span class="label">👤 姓名</span>
-              <span class="value">{{ healthProfile.real_name }}</span>
+            
+            <div class="metric-grid">
+              <div class="mini-metric">
+                <span class="label">血压</span>
+                <span class="value">{{ healthProfile.systolic_pressure || '-' }}/{{ healthProfile.diastolic_pressure || '-' }}</span>
+                <span class="unit">mmHg</span>
+              </div>
+              <div class="mini-metric">
+                <span class="label">心率</span>
+                <span class="value">{{ healthProfile.heart_rate || '-' }}</span>
+                <span class="unit">bpm</span>
+              </div>
+              <div class="mini-metric">
+                <span class="label">血糖</span>
+                <span class="value">{{ healthProfile.blood_glucose || '-' }}</span>
+                <span class="unit">mmol/L</span>
+              </div>
+              <div class="mini-metric">
+                <span class="label">体温</span>
+                <span class="value">{{ healthProfile.temperature || '-' }}</span>
+                <span class="unit">℃</span>
+              </div>
             </div>
-            <div class="info-row">
-              <span class="label">🩸 血型</span>
-              <span class="value">{{ healthProfile.blood_type || '-' }}</span>
-            </div>
-            <div class="info-row">
-              <span class="label">📏 身高</span>
-              <span class="value">{{ healthProfile.height || '-' }} cm</span>
-            </div>
-            <div class="info-row">
-              <span class="label">⚖️ 体重</span>
-              <span class="value">{{ healthProfile.weight || '-' }} kg</span>
-            </div>
-            <div class="info-row">
-              <span class="label">📊 BMI</span>
-              <span class="value" :class="getBMIClass(bmi)">{{ bmi }}</span>
-            </div>
-            <div v-if="healthProfile.systolic_pressure && healthProfile.diastolic_pressure" class="info-row">
-              <span class="label">💓 血压</span>
-              <span class="value">{{ healthProfile.systolic_pressure }}/{{ healthProfile.diastolic_pressure }} mmHg</span>
-            </div>
-            <div v-if="healthProfile.heart_rate" class="info-row">
-              <span class="label">💗 心率</span>
-              <span class="value">{{ healthProfile.heart_rate }} 次/分</span>
-            </div>
-            <div v-if="healthProfile.blood_glucose" class="info-row">
-              <span class="label">🍬 血糖</span>
-              <span class="value">{{ healthProfile.blood_glucose }} mmol/L</span>
-            </div>
-            <div v-if="healthProfile.temperature" class="info-row">
-              <span class="label">🌡️ 体温</span>
-              <span class="value">{{ healthProfile.temperature }} ℃</span>
-            </div>
-            <div v-if="healthProfile.chronic_diseases" class="info-row chronic">
-              <span class="label">🏥 慢性病</span>
-              <el-tag v-for="disease in healthProfile.chronic_diseases.split(',')"
-                      :key="disease"
-                      size="small"
-                      type="warning"
-                      style="margin: 2px">
-                {{ disease.trim() }}
-              </el-tag>
+
+            <div class="tags-section" v-if="healthProfile.chronic_diseases">
+              <span class="section-label">慢性病史</span>
+              <div class="tags-wrapper">
+                <el-tag 
+                  v-for="disease in healthProfile.chronic_diseases.split(',')"
+                  :key="disease"
+                  size="small"
+                  type="warning"
+                  effect="light"
+                  round
+                >
+                  {{ disease.trim() }}
+                </el-tag>
+              </div>
             </div>
           </div>
           <el-empty v-else description="暂无健康信息" :image-size="60" />
-        </el-card>
-      </el-col>
-      
-      <el-col :span="8">
-        <el-card class="health-card">
-          <template #header>
-            <div class="card-header">
-              <span>⚠️ 过敏史</span>
-              <el-button text type="primary" @click="$router.push('/health-profile?tab=allergy')">详情</el-button>
-            </div>
-          </template>
-          <div v-if="allergies.length > 0" class="allergy-list">
-            <div v-for="item in allergies.slice(0, 3)" :key="item.id" class="allergy-item">
-              <div class="allergy-header">
-                <el-tag :type="getSeverityType(item.severity)" size="small">
-                  {{ item.allergen }}
-                </el-tag>
-                <span class="allergy-type">{{ getAllergenTypeText(item.allergen_type) }}</span>
-              </div>
-              <div class="allergy-reaction">{{ item.reaction || '无反应描述' }}</div>
-            </div>
-            <div v-if="allergies.length > 3" class="more-hint">
-              还有 {{ allergies.length - 3 }} 条记录...
+        </div>
+
+        <!-- 快捷入口/最近记录 -->
+        <div class="content-card">
+          <div class="card-header">
+            <div class="header-title">
+              <el-icon class="header-icon"><Files /></el-icon>
+              <span>最近记录</span>
             </div>
           </div>
-          <el-empty v-else description="暂无过敏记录" :image-size="60" />
-        </el-card>
-      </el-col>
-      
-      <el-col :span="8">
-        <el-card class="health-card">
-          <template #header>
-            <div class="card-header">
-              <span>🧬 家族病史</span>
-              <el-button text type="primary" @click="$router.push('/health-profile?tab=family-history')">详情</el-button>
-            </div>
-          </template>
-          <div v-if="familyHistories.length > 0" class="family-history-list">
-            <div v-for="item in familyHistories.slice(0, 3)" :key="item.id" class="history-item">
-              <div class="history-header">
-                <el-tag type="info" size="small">{{ item.relative }}</el-tag>
-                <span class="disease-name">{{ item.disease }}</span>
+          <div class="recent-list">
+            <div class="recent-item" v-for="item in checkups.slice(0, 2)" :key="item.id">
+              <div class="recent-icon checkup">
+                <el-icon><DocumentChecked /></el-icon>
               </div>
-              <div class="history-detail">
-                发病年龄：{{ item.onset_age || '未知' }} 岁
+              <div class="recent-info">
+                <span class="recent-title">{{ item.checkup_type || '常规体检' }}</span>
+                <span class="recent-date">{{ item.checkup_date }}</span>
               </div>
             </div>
-            <div v-if="familyHistories.length > 3" class="more-hint">
-              还有 {{ familyHistories.length - 3 }} 条记录...
+            <div class="recent-item" v-for="item in surgeries.slice(0, 2)" :key="item.id">
+              <div class="recent-icon surgery">
+                <el-icon><KnifeFork /></el-icon>
+              </div>
+              <div class="recent-info">
+                <span class="recent-title">{{ item.surgery_name }}</span>
+                <span class="recent-date">{{ item.surgery_date }}</span>
+              </div>
+            </div>
+            <div v-if="checkups.length === 0 && surgeries.length === 0" class="empty-text">
+              暂无最近记录
             </div>
           </div>
-          <el-empty v-else description="暂无家族病史" :image-size="60" />
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <!-- 手术记录和体检报告 -->
-    <el-row :gutter="20" style="margin-top: 20px; margin-bottom: 20px">
-      <el-col :span="12">
-        <el-card class="health-card">
-          <template #header>
-            <div class="card-header">
-              <span>🏥 手术记录</span>
-              <el-button text type="primary" @click="$router.push('/health-profile?tab=surgery')">详情</el-button>
-            </div>
-          </template>
-          <div v-if="surgeries.length > 0" class="surgery-list">
-            <el-timeline>
-              <el-timeline-item
-                v-for="item in surgeries.slice(0, 3)"
-                :key="item.id"
-                :timestamp="item.surgery_date"
-                placement="top"
-              >
-                <el-card>
-                  <h4>{{ item.surgery_name }}</h4>
-                  <p v-if="item.hospital" class="detail-text">医院：{{ item.hospital }}</p>
-                  <p v-if="item.doctor" class="detail-text">医生：{{ item.doctor }}</p>
-                </el-card>
-              </el-timeline-item>
-            </el-timeline>
-            <div v-if="surgeries.length > 3" class="more-hint">
-              还有 {{ surgeries.length - 3 }} 条记录...
-            </div>
-          </div>
-          <el-empty v-else description="暂无手术记录" :image-size="60" />
-        </el-card>
-      </el-col>
-      
-      <el-col :span="12">
-        <el-card class="health-card">
-          <template #header>
-            <div class="card-header">
-              <span>📋 体检报告</span>
-              <el-button text type="primary" @click="$router.push('/health-profile?tab=checkup')">详情</el-button>
-            </div>
-          </template>
-          <div v-if="checkups.length > 0" class="checkup-list">
-            <el-timeline>
-              <el-timeline-item
-                v-for="item in checkups.slice(0, 3)"
-                :key="item.id"
-                :timestamp="item.checkup_date"
-                placement="top"
-              >
-                <el-card>
-                  <h4>{{ item.checkup_type || '常规体检' }}</h4>
-                  <p v-if="item.hospital" class="detail-text">医院：{{ item.hospital }}</p>
-                  <p v-if="item.summary" class="detail-text summary">{{ item.summary }}</p>
-                </el-card>
-              </el-timeline-item>
-            </el-timeline>
-            <div v-if="checkups.length > 3" class="more-hint">
-              还有 {{ checkups.length - 3 }} 条记录...
-            </div>
-          </div>
-          <el-empty v-else description="暂无体检报告" :image-size="60" />
-        </el-card>
-      </el-col>
-    </el-row>
-
-
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -315,6 +250,10 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useMedicationStore } from '@/stores/medication'
 import { useUserStore } from '@/stores/user'
 import { scheduleAPI, symptomAPI, recordAPI, healthProfileAPI, familyAPI } from '@/api'
+import { 
+  Box, AlarmClock, Calendar, Notebook, Timer, UserFilled, 
+  DataLine, Files, DocumentChecked, KnifeFork 
+} from '@element-plus/icons-vue'
 
 const medicationStore = useMedicationStore()
 const userStore = useUserStore()
@@ -342,32 +281,27 @@ const bmi = computed(() => {
   return '-'
 })
 
-// 计算今日待服药数量（根据当前时间判断）
+// 计算今日待服药数量
 const todayPendingCount = computed(() => {
   const now = new Date()
-  const currentTime = now.getHours() * 60 + now.getMinutes() // 当前时间（分钟数）
+  const currentTime = now.getHours() * 60 + now.getMinutes()
   
   let count = 0
   todaySchedules.value.forEach(schedule => {
     if (Array.isArray(schedule.scheduled_times)) {
       schedule.scheduled_times.forEach((time: string) => {
-        // 解析时间字符串 "HH:mm:ss"
         const [hours, minutes] = time.split(':').map(Number)
         const scheduleTime = hours * 60 + minutes
-        
-        // 如果计划时间大于等于当前时间，则计入待服药
         if (scheduleTime >= currentTime) {
           count++
         }
       })
     }
   })
-  
   return count
 })
 
 onMounted(async () => {
-  // 确保用户信息已加载
   if (!userStore.user) {
     await userStore.fetchUserInfo()
   }
@@ -389,7 +323,6 @@ onMounted(async () => {
 async function fetchTodaySchedules() {
   try {
     const data: any = await scheduleAPI.list(true)
-    // 筛选出今天有服药时间的计划
     const today = new Date()
     todaySchedules.value = data.filter((schedule: any) => {
       const startDate = new Date(schedule.start_date)
@@ -401,7 +334,6 @@ async function fetchTodaySchedules() {
   }
 }
 
-// 获取症状记录数量
 async function fetchSymptomCount() {
   try {
     const data: any = await symptomAPI.list()
@@ -411,35 +343,30 @@ async function fetchSymptomCount() {
   }
 }
 
-// 获取已服药天数（根据历史记录统计）
-// 获取用药计划天数（根据计划开始时间计算）
 async function fetchMedicationScheduleDays() {
   try {
-    const data: any = await scheduleAPI.list(true) // 只获取活跃的计划
+    const data: any = await scheduleAPI.list(true)
     const today = new Date()
-    today.setHours(0, 0, 0, 0) // 重置到当天0点
+    today.setHours(0, 0, 0, 0)
     
     medicationScheduleDays.value = data.map((schedule: any) => {
       const startDate = new Date(schedule.start_date)
-      startDate.setHours(0, 0, 0, 0) // 重置到当天0点
-      
-      // 计算天数差（今天 - 开始日期 + 1）
+      startDate.setHours(0, 0, 0, 0)
       const diffTime = today.getTime() - startDate.getTime()
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1
       
       return {
         id: schedule.id,
         name: schedule.user_medication?.custom_name || schedule.user_medication?.medicine?.name || '未知药品',
-        days: Math.max(0, diffDays) // 确保不为负数
+        days: Math.max(0, diffDays)
       }
-    }).filter((item: any) => item.days > 0) // 只显示天数大于0的
+    }).filter((item: any) => item.days > 0)
     
   } catch (error) {
     console.error('获取用药计划天数失败:', error)
   }
 }
 
-// 获取健康档案数据
 async function fetchHealthProfile() {
   try {
     healthProfile.value = await healthProfileAPI.get()
@@ -480,7 +407,6 @@ async function fetchCheckups() {
   }
 }
 
-// 获取家庭成员用药信息
 async function fetchFamilyMembers() {
   try {
     const data: any = await familyAPI.getMembersMedication()
@@ -491,7 +417,6 @@ async function fetchFamilyMembers() {
   }
 }
 
-// 获取时间状态（用于标签颜色）
 function getTimeStatus(timeStr: string): string {
   const now = new Date()
   const currentTime = now.getHours() * 60 + now.getMinutes()
@@ -500,15 +425,14 @@ function getTimeStatus(timeStr: string): string {
   const scheduleTime = hours * 60 + minutes
   
   if (scheduleTime < currentTime) {
-    return 'info' // 已过期（灰色）
+    return 'info'
   } else if (scheduleTime < currentTime + 30) {
-    return 'warning' // 即将到时（30分钟内，黄色）
+    return 'warning'
   } else {
-    return 'success' // 还未到时（绿色）
+    return 'success'
   }
 }
 
-// 获取BMI分级颜色
 function getBMIClass(bmiValue: string): string {
   if (bmiValue === '-') return ''
   const bmi = parseFloat(bmiValue)
@@ -518,28 +442,15 @@ function getBMIClass(bmiValue: string): string {
   return 'obese'
 }
 
-// 获取严重程度类型
-function getSeverityType(severity: string | null): string {
-  switch (severity) {
-    case '轻微': return 'success'
-    case '中度': return 'warning'
-    case '严重': return 'danger'
-    default: return 'info'
-  }
+function getBMIStatusText(bmiValue: string): string {
+  if (bmiValue === '-') return '未知'
+  const bmi = parseFloat(bmiValue)
+  if (bmi < 18.5) return '偏瘦'
+  if (bmi < 24) return '正常'
+  if (bmi < 28) return '超重'
+  return '肥胖'
 }
 
-// 获取过敏原类型文本
-function getAllergenTypeText(type: string | null): string {
-  const typeMap: Record<string, string> = {
-    '药物': '💊',
-    '食物': '🍎',
-    '环境': '🌳',
-    '其他': '❓'
-  }
-  return typeMap[type || ''] || '❓'
-}
-
-// 切换到家庭成员账号
 async function handleSwitchToMember(member: any) {
   try {
     await ElMessageBox.confirm(
@@ -552,14 +463,11 @@ async function handleSwitchToMember(member: any) {
       }
     )
     
-    // 调用后端切换接口
     const res: any = await familyAPI.switchAccount(member.user_id)
     
-    // 更新token
     userStore.token = res.access_token
     localStorage.setItem('token', res.access_token)
     
-    // 存储原管理员ID（用于后续切换回来）
     const currentUserId = userStore.user?.id
     if (currentUserId) {
       sessionStorage.setItem('admin_user_id', currentUserId.toString())
@@ -567,7 +475,6 @@ async function handleSwitchToMember(member: any) {
     
     ElMessage.success(`已切换到 ${member.real_name || member.username} 的账号`)
     
-    // 重新加载页面
     setTimeout(() => {
       window.location.href = '/'
     }, 500)
@@ -579,335 +486,434 @@ async function handleSwitchToMember(member: any) {
 }
 </script>
 
-<style scoped lang="scss">
+<style scoped>
 .dashboard {
   width: 100%;
-  height: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .welcome-section {
-  text-align: center;
-  padding: 40px 20px 20px;
-  background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
-  border-radius: 20px;
-  margin-bottom: 30px;
-  animation: fadeInDown 0.8s ease-out;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  border-radius: var(--radius-lg);
+  padding: 32px 40px;
+  color: white;
+  margin-bottom: 32px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
 }
 
-@keyframes fadeInDown {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.welcome-text {
+  position: relative;
+  z-index: 2;
 }
 
 .welcome-title {
-  margin: 0;
-  font-size: 42px;
+  font-size: 28px;
   font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.gradient-text {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: shimmer 3s ease-in-out infinite;
-  background-size: 200% auto;
-}
-
-@keyframes shimmer {
-  0%, 100% { background-position: 0% center; }
-  50% { background-position: 100% center; }
+  margin-bottom: 8px;
 }
 
 .welcome-subtitle {
-  font-size: 24px;
-  color: #606266;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  font-weight: 500;
+  font-size: 16px;
+  opacity: 0.9;
 }
 
-.brand-name {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  font-weight: 700;
-  font-size: 28px;
-}
-
-.divider {
-  color: #dcdfe6;
-  font-weight: 300;
-}
-
-.slogan {
-  color: #909399;
-  font-size: 18px;
-  font-weight: 400;
-  letter-spacing: 0.5px;
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-bottom: 32px;
 }
 
 .stat-card {
-  text-align: center;
-  border: none;
-  border-radius: 12px;
-  transition: all 0.3s ease;
-  overflow: hidden;
+  background: white;
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.3s, box-shadow 0.3s;
 }
 
 .stat-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
 }
 
-.stat-card-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.stat-card-warning {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  color: white;
-}
-
-.stat-card-success {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  color: white;
-}
-
-.stat-card-info {
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-  color: white;
-}
-
-.stat-content {
+.stat-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
   display: flex;
-  align-items: flex-start;
-  padding: 10px;
-  gap: 15px;
-  min-height: 80px;
-  max-height: 80px;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
 }
 
-.stat-icon {
-  font-size: 48px;
-  opacity: 0.9;
+.stat-card.primary .stat-icon-wrapper {
+  background-color: rgba(42, 157, 143, 0.1);
+  color: var(--color-primary);
+}
+
+.stat-card.warning .stat-icon-wrapper {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: var(--color-warning);
+}
+
+.stat-card.success .stat-icon-wrapper {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: var(--color-success);
+}
+
+.stat-card.info .stat-icon-wrapper {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: var(--color-info);
 }
 
 .stat-info {
   flex: 1;
-  text-align: left;
 }
 
-.stat-title {
-  font-size: 14px;
-  opacity: 0.95;
-  margin-bottom: 8px;
-  font-weight: 500;
+.stat-label {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-bottom: 4px;
 }
 
 .stat-value {
-  font-size: 32px;
-  font-weight: bold;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-text-main);
+  line-height: 1;
 }
 
-.el-button {
-  margin: 5px;
+.stat-value .unit {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-text-light);
+  margin-left: 4px;
 }
 
-// 健康档案卡片样式
-.health-card {
-  border-radius: 12px;
-  transition: all 0.3s ease;
-  height: 100%;
-  
-  &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  }
-  
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-weight: 600;
-    font-size: 16px;
-  }
+/* Main Grid Layout */
+.main-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
 }
 
-.health-info {
-  .info-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 0;
-    border-bottom: 1px solid #f0f0f0;
-    
-    &:last-child {
-      border-bottom: none;
-    }
-    
-    &.chronic {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-    
-    .label {
-      color: #909399;
-      font-size: 14px;
-    }
-    
-    .value {
-      font-weight: 600;
-      font-size: 16px;
-      color: #303133;
-      
-      &.normal {
-        color: #67c23a;
-      }
-      
-      &.underweight,
-      &.overweight {
-        color: #e6a23c;
-      }
-      
-      &.obese {
-        color: #f56c6c;
-      }
-    }
-  }
+.left-column, .right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
-.allergy-list,
-.family-history-list {
-  .allergy-item,
-  .history-item {
-    padding: 10px;
-    margin-bottom: 10px;
-    background: #f5f7fa;
-    border-radius: 8px;
-    border-left: 3px solid #409eff;
-    
-    &:last-of-type {
-      margin-bottom: 0;
-    }
-  }
-  
-  .allergy-header,
-  .history-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 6px;
-  }
-  
-  .allergy-type {
-    font-size: 18px;
-  }
-  
-  .allergy-reaction,
-  .history-detail {
-    font-size: 13px;
-    color: #606266;
-    margin-top: 5px;
-  }
-  
-  .disease-name {
-    font-weight: 600;
-    color: #303133;
-  }
+/* Content Cards */
+.content-card {
+  background: white;
+  border-radius: var(--radius-md);
+  padding: 24px;
+  box-shadow: var(--shadow-card);
 }
 
-.surgery-list,
-.checkup-list {
-  :deep(.el-timeline) {
-    padding-left: 0;
-  }
-  
-  :deep(.el-timeline-item__wrapper) {
-    padding-left: 20px;
-  }
-  
-  :deep(.el-card) {
-    margin-bottom: 0;
-    
-    h4 {
-      margin: 0 0 8px 0;
-      color: #303133;
-      font-size: 15px;
-    }
-    
-    .detail-text {
-      margin: 4px 0;
-      font-size: 13px;
-      color: #606266;
-      
-      &.summary {
-        color: #909399;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-      }
-    }
-  }
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
 }
 
-.more-hint {
-  text-align: center;
-  padding: 10px;
-  color: #909399;
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-main);
+}
+
+.header-icon {
+  color: var(--color-primary);
+}
+
+/* Schedule List */
+.schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.schedule-item {
+  display: flex;
+  gap: 16px;
+}
+
+.schedule-time-line {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 20px;
+}
+
+.time-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--color-primary);
+  margin-top: 6px;
+}
+
+.time-line {
+  flex: 1;
+  width: 2px;
+  background-color: var(--color-border);
+  margin-top: 4px;
+}
+
+.schedule-item:last-child .time-line {
+  display: none;
+}
+
+.schedule-content {
+  flex: 1;
+  background-color: var(--color-bg-page);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+}
+
+.medicine-info h4 {
+  margin: 0 0 4px 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.medicine-info p {
+  margin: 0 0 8px 0;
   font-size: 13px;
-  margin-top: 10px;
+  color: var(--color-text-secondary);
 }
 
-// 服药天数容器样式
-.medication-days-container {
-  max-height: 55px;
-  overflow-y: auto;
-  text-align: left;
-  font-size: 13px;
-  line-height: 1.4;
-  padding-right: 5px;
-  
-  // 滚动条样式
-  &::-webkit-scrollbar {
-    width: 4px;
-  }
-  
-  &::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 2px;
-  }
-  
-  &::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 2px;
-    
-    &:hover {
-      background: rgba(255, 255, 255, 0.5);
-    }
-  }
+.time-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.medication-day-item {
+/* Family Grid */
+.family-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.family-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: border-color 0.3s;
+}
+
+.family-card:hover {
+  border-color: var(--color-primary);
+}
+
+.family-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.family-avatar {
+  background-color: var(--color-secondary-light);
+  color: white;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.family-text {
+  flex: 1;
+}
+
+.name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 4px;
-  padding: 2px 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.name {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.status-text {
+  font-size: 12px;
+}
+
+.active-status {
+  color: var(--color-success);
+}
+
+.inactive-status {
+  color: var(--color-text-light);
+}
+
+/* Health Metrics */
+.health-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.metric-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.metric-item .label {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.metric-item .value-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.metric-item .value {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.status-badge {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background-color: var(--color-bg-page);
+}
+
+.value.normal, .status-badge.normal { color: var(--color-success); }
+.value.underweight, .status-badge.underweight { color: var(--color-warning); }
+.value.overweight, .status-badge.overweight { color: var(--color-warning); }
+.value.obese, .status-badge.obese { color: var(--color-danger); }
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.mini-metric {
+  background-color: var(--color-bg-page);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.mini-metric .label {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: 4px;
+}
+
+.mini-metric .value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-main);
+}
+
+.mini-metric .unit {
+  font-size: 10px;
+  color: var(--color-text-light);
+}
+
+.tags-section {
+  margin-top: 8px;
+}
+
+.section-label {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.tags-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Recent List */
+.recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-page);
+}
+
+.recent-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.recent-icon.checkup {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: var(--color-info);
+}
+
+.recent-icon.surgery {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--color-danger);
+}
+
+.recent-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.recent-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-main);
+}
+
+.recent-date {
+  font-size: 12px;
+  color: var(--color-text-light);
+}
+
+.empty-text {
+  text-align: center;
+  color: var(--color-text-light);
+  font-size: 13px;
+  padding: 20px 0;
 }
 </style>
+

@@ -1,340 +1,370 @@
 <template>
   <div class="health-profile-container">
-    <el-card class="header-card">
-      <h2>健康档案</h2>
-      <p class="subtitle">完善您的健康档案，让用药更安全</p>
-    </el-card>
-
-    <el-tabs v-model="activeTab" class="profile-tabs">
-      <!-- 基本信息 -->
-      <el-tab-pane label="基本信息" name="basic">
-        <el-card>
-          <template #header>
-            <div class="card-header">
-              <span>基本健康信息</span>
-              <el-button type="primary" @click="saveBasicInfo" :loading="saving">保存</el-button>
-            </div>
+    <div class="profile-content">
+      <el-tabs v-model="activeTab" class="custom-tabs" type="border-card">
+        <!-- 基本信息 -->
+        <el-tab-pane name="basic">
+          <template #label>
+            <span class="tab-label"><el-icon><User /></el-icon> 基本信息</span>
           </template>
           
-          <el-form :model="basicInfo" label-width="120px">
-            <el-row :gutter="20">
-              <el-col :span="12">
-                <el-form-item label="真实姓名">
-                  <el-input v-model="basicInfo.real_name" placeholder="请输入真实姓名" />
-                </el-form-item>
-              </el-col>
-              <el-col :span="12">
-                <el-form-item label="血型">
-                  <el-select v-model="basicInfo.blood_type" placeholder="请选择血型" clearable>
-                    <el-option label="A型" value="A" />
-                    <el-option label="B型" value="B" />
-                    <el-option label="AB型" value="AB" />
-                    <el-option label="O型" value="O" />
-                    <el-option label="未知" value="未知" />
-                  </el-select>
-                </el-form-item>
-              </el-col>
-            </el-row>
-            <el-row :gutter="20">
-              <el-col :span="12">
-                <el-form-item label="身高 (cm)">
-                  <el-input-number v-model="basicInfo.height" :min="0" :max="300" style="width: 100%;" />
-                </el-form-item>
-              </el-col>
-              <el-col :span="12">
-                <el-form-item label="体重 (kg)">
-                  <el-input-number v-model="basicInfo.weight" :min="0" :max="500" style="width: 100%;" />
-                </el-form-item>
-              </el-col>
-            </el-row>
-            <el-row :gutter="20">
-              <el-col :span="12">
-                <el-form-item label="BMI">
-                  <el-input :value="bmi" disabled />
-                </el-form-item>
-              </el-col>
-              <el-col :span="12">
-                <el-form-item label="血压 (mmHg)">
-                  <div style="display: flex; gap: 10px; align-items: center;">
-                    <el-input-number 
-                      v-model="basicInfo.systolic_pressure" 
-                      :min="0" 
-                      :max="300" 
-                      placeholder="收缩压"
-                      style="flex: 1;"
-                    />
-                    <span>/</span>
-                    <el-input-number 
-                      v-model="basicInfo.diastolic_pressure" 
-                      :min="0" 
-                      :max="200" 
-                      placeholder="舒张压"
-                      style="flex: 1;"
-                    />
-                  </div>
-                </el-form-item>
-              </el-col>
-            </el-row>
-            <el-row :gutter="20">
-              <el-col :span="12">
-                <el-form-item label="心率 (次/分)">
-                  <el-input-number v-model="basicInfo.heart_rate" :min="0" :max="300" style="width: 100%;" />
-                </el-form-item>
-              </el-col>
-              <el-col :span="12">
-                <el-form-item label="血糖 (mmol/L)">
-                  <el-input v-model="basicInfo.blood_glucose" placeholder="如: 5.6" />
-                </el-form-item>
-              </el-col>
-            </el-row>
-            <el-row :gutter="20">
-              <el-col :span="12">
-                <el-form-item label="体温 (℃)">
-                  <el-input v-model="basicInfo.temperature" placeholder="如: 36.5" />
-                </el-form-item>
-              </el-col>
-            </el-row>
-            <el-form-item label="慢性疾病">
-              <el-input 
-                v-model="basicInfo.chronic_diseases" 
-                type="textarea" 
-                :rows="3"
-                placeholder="如：高血压、糖尿病等，多个用逗号分隔"
-              />
-            </el-form-item>
-          </el-form>
-        </el-card>
-      </el-tab-pane>
-
-      <!-- 过敏史 -->
-      <el-tab-pane label="过敏史" name="allergies">
-        <el-card>
-          <template #header>
-            <div class="card-header">
-              <span>过敏史记录</span>
-              <el-button type="primary" @click="showAllergyDialog">添加过敏记录</el-button>
+          <div class="tab-pane-content">
+            <div class="section-header">
+              <h3>基本健康信息</h3>
+              <el-button type="primary" @click="saveBasicInfo" :loading="saving">保存修改</el-button>
             </div>
+            
+            <el-form :model="basicInfo" label-width="100px" label-position="top" class="custom-form">
+              <el-row :gutter="24">
+                <el-col :span="8">
+                  <el-form-item label="真实姓名">
+                    <el-input v-model="basicInfo.real_name" placeholder="请输入真实姓名" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                  <el-form-item label="血型">
+                    <el-select v-model="basicInfo.blood_type" placeholder="请选择血型" clearable style="width: 100%">
+                      <el-option label="A型" value="A" />
+                      <el-option label="B型" value="B" />
+                      <el-option label="AB型" value="AB" />
+                      <el-option label="O型" value="O" />
+                      <el-option label="未知" value="未知" />
+                    </el-select>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                  <el-form-item label="BMI 指数">
+                    <el-input :value="bmi" disabled>
+                      <template #append>
+                        <el-tag size="small" :type="getBMIType(bmi)">{{ getBMIStatus(bmi) }}</el-tag>
+                      </template>
+                    </el-input>
+                  </el-form-item>
+                </el-col>
+              </el-row>
+
+              <el-row :gutter="24">
+                <el-col :span="8">
+                  <el-form-item label="身高 (cm)">
+                    <el-input-number v-model="basicInfo.height" :min="0" :max="300" style="width: 100%;" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                  <el-form-item label="体重 (kg)">
+                    <el-input-number v-model="basicInfo.weight" :min="0" :max="500" style="width: 100%;" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                  <el-form-item label="心率 (次/分)">
+                    <el-input-number v-model="basicInfo.heart_rate" :min="0" :max="300" style="width: 100%;" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+
+              <el-row :gutter="24">
+                <el-col :span="12">
+                  <el-form-item label="血压 (mmHg)">
+                    <div class="pressure-inputs">
+                      <el-input-number 
+                        v-model="basicInfo.systolic_pressure" 
+                        :min="0" 
+                        :max="300" 
+                        placeholder="收缩压"
+                        style="flex: 1;"
+                      />
+                      <span class="separator">/</span>
+                      <el-input-number 
+                        v-model="basicInfo.diastolic_pressure" 
+                        :min="0" 
+                        :max="200" 
+                        placeholder="舒张压"
+                        style="flex: 1;"
+                      />
+                    </div>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="6">
+                  <el-form-item label="血糖 (mmol/L)">
+                    <el-input v-model="basicInfo.blood_glucose" placeholder="如: 5.6" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="6">
+                  <el-form-item label="体温 (℃)">
+                    <el-input v-model="basicInfo.temperature" placeholder="如: 36.5" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+
+              <el-form-item label="慢性疾病">
+                <el-input 
+                  v-model="basicInfo.chronic_diseases" 
+                  type="textarea" 
+                  :rows="3"
+                  placeholder="如：高血压、糖尿病等，多个用逗号分隔"
+                />
+              </el-form-item>
+            </el-form>
+          </div>
+        </el-tab-pane>
+
+        <!-- 过敏史 -->
+        <el-tab-pane name="allergies">
+          <template #label>
+            <span class="tab-label"><el-icon><Warning /></el-icon> 过敏史</span>
           </template>
           
-          <el-table :data="allergies" stripe>
-            <el-table-column prop="allergen" label="过敏原" width="150" />
-            <el-table-column prop="allergen_type" label="类型" width="100">
-              <template #default="{ row }">
-                <el-tag v-if="row.allergen_type" size="small">{{ row.allergen_type }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="reaction" label="过敏反应" />
-            <el-table-column prop="severity" label="严重程度" width="100">
-              <template #default="{ row }">
-                <el-tag v-if="row.severity === '严重'" type="danger" size="small">严重</el-tag>
-                <el-tag v-else-if="row.severity === '中等'" type="warning" size="small">中等</el-tag>
-                <el-tag v-else-if="row.severity === '轻微'" type="success" size="small">轻微</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="150" fixed="right">
-              <template #default="{ row }">
-                <el-button link type="primary" size="small" @click="editAllergy(row)">U</el-button>
-                <el-button link type="danger" size="small" @click="deleteAllergy(row.id)">D</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-        </el-card>
-      </el-tab-pane>
+          <div class="tab-pane-content">
+            <div class="section-header">
+              <h3>过敏史记录</h3>
+              <el-button type="primary" @click="showAllergyDialog">添加记录</el-button>
+            </div>
+            
+            <el-table :data="allergies" stripe class="custom-table">
+              <el-table-column prop="allergen" label="过敏原" width="180" />
+              <el-table-column prop="allergen_type" label="类型" width="120">
+                <template #default="{ row }">
+                  <el-tag effect="plain">{{ row.allergen_type || '未知' }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="reaction" label="过敏反应" />
+              <el-table-column prop="severity" label="严重程度" width="120">
+                <template #default="{ row }">
+                  <el-tag :type="getSeverityType(row.severity)">{{ row.severity || '未知' }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="150" align="center">
+                <template #default="{ row }">
+                  <el-button link type="primary" @click="editAllergy(row)">编辑</el-button>
+                  <el-button link type="danger" @click="deleteAllergy(row.id)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </el-tab-pane>
 
-      <!-- 家族病史 -->
-      <el-tab-pane label="家族病史" name="family-history">
-        <el-card>
-          <template #header>
-            <div class="card-header">
-              <span>家族病史</span>
+        <!-- 家族病史 -->
+        <el-tab-pane name="family-history">
+          <template #label>
+            <span class="tab-label"><el-icon><Connection /></el-icon> 家族病史</span>
+          </template>
+          
+          <div class="tab-pane-content">
+            <div class="section-header">
+              <h3>家族病史</h3>
               <el-button type="primary" @click="showFamilyHistoryDialog">添加病史</el-button>
             </div>
+            
+            <el-table :data="familyHistories" stripe class="custom-table">
+              <el-table-column prop="relative" label="亲属关系" width="150" />
+              <el-table-column prop="disease" label="疾病" width="200" />
+              <el-table-column prop="onset_age" label="发病年龄" width="120">
+                <template #default="{ row }">
+                  {{ row.onset_age ? `${row.onset_age}岁` : '-' }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="notes" label="备注" />
+              <el-table-column label="操作" width="150" align="center">
+                <template #default="{ row }">
+                  <el-button link type="primary" @click="editFamilyHistory(row)">编辑</el-button>
+                  <el-button link type="danger" @click="deleteFamilyHistory(row.id)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </el-tab-pane>
+
+        <!-- 手术记录 -->
+        <el-tab-pane name="surgeries">
+          <template #label>
+            <span class="tab-label"><el-icon><KnifeFork /></el-icon> 手术记录</span>
           </template>
           
-          <el-table :data="familyHistories" stripe>
-            <el-table-column prop="relative" label="亲属关系" width="120" />
-            <el-table-column prop="disease" label="疾病" width="180" />
-            <el-table-column prop="onset_age" label="发病年龄" width="100" />
-            <el-table-column prop="notes" label="备注" />
-            <el-table-column label="操作" width="150" fixed="right">
-              <template #default="{ row }">
-                <el-button link type="primary" size="small" @click="editFamilyHistory(row)">U</el-button>
-                <el-button link type="danger" size="small" @click="deleteFamilyHistory(row.id)">D</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-        </el-card>
-      </el-tab-pane>
-
-      <!-- 手术记录 -->
-      <el-tab-pane label="手术记录" name="surgeries">
-        <el-card>
-          <template #header>
-            <div class="card-header">
-              <span>手术记录</span>
-              <el-button type="primary" @click="showSurgeryDialog">添加手术记录</el-button>
+          <div class="tab-pane-content">
+            <div class="section-header">
+              <h3>手术记录</h3>
+              <el-button type="primary" @click="showSurgeryDialog">添加记录</el-button>
             </div>
+            
+            <el-table :data="surgeries" stripe class="custom-table">
+              <el-table-column prop="surgery_name" label="手术名称" width="200" />
+              <el-table-column prop="surgery_date" label="手术日期" width="150" />
+              <el-table-column prop="hospital" label="医院" width="200" />
+              <el-table-column prop="doctor" label="主刀医生" width="120" />
+              <el-table-column prop="notes" label="备注" />
+              <el-table-column label="操作" width="150" align="center">
+                <template #default="{ row }">
+                  <el-button link type="primary" @click="editSurgery(row)">编辑</el-button>
+                  <el-button link type="danger" @click="deleteSurgery(row.id)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </el-tab-pane>
+
+        <!-- 体检报告 -->
+        <el-tab-pane name="checkups">
+          <template #label>
+            <span class="tab-label"><el-icon><DocumentChecked /></el-icon> 体检报告</span>
           </template>
           
-          <el-table :data="surgeries" stripe>
-            <el-table-column prop="surgery_name" label="手术名称" width="200" />
-            <el-table-column prop="surgery_date" label="手术日期" width="120" />
-            <el-table-column prop="hospital" label="医院" width="180" />
-            <el-table-column prop="doctor" label="主刀医生" width="100" />
-            <el-table-column prop="notes" label="备注" />
-            <el-table-column label="操作" width="150" fixed="right">
-              <template #default="{ row }">
-                <el-button link type="primary" size="small" @click="editSurgery(row)">U</el-button>
-                <el-button link type="danger" size="small" @click="deleteSurgery(row.id)">D</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-        </el-card>
-      </el-tab-pane>
-
-      <!-- 体检报告 -->
-      <el-tab-pane label="体检报告" name="checkups">
-        <el-card>
-          <template #header>
-            <div class="card-header">
-              <span>体检报告</span>
-              <el-button type="primary" @click="showCheckupDialog">添加体检报告</el-button>
+          <div class="tab-pane-content">
+            <div class="section-header">
+              <h3>体检报告</h3>
+              <el-button type="primary" @click="showCheckupDialog">添加报告</el-button>
             </div>
+            
+            <el-table :data="checkups" stripe class="custom-table">
+              <el-table-column prop="checkup_date" label="体检日期" width="150" />
+              <el-table-column prop="checkup_type" label="体检类型" width="180" />
+              <el-table-column prop="hospital" label="医院" width="200" />
+              <el-table-column prop="summary" label="总结" show-overflow-tooltip />
+              <el-table-column label="操作" width="150" align="center">
+                <template #default="{ row }">
+                  <el-button link type="primary" @click="editCheckup(row)">编辑</el-button>
+                  <el-button link type="danger" @click="deleteCheckup(row.id)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </el-tab-pane>
+
+        <!-- 疫苗接种 -->
+        <el-tab-pane name="vaccinations">
+          <template #label>
+            <span class="tab-label"><el-icon><Aim /></el-icon> 疫苗接种</span>
           </template>
           
-          <el-table :data="checkups" stripe>
-            <el-table-column prop="checkup_date" label="体检日期" width="120" />
-            <el-table-column prop="checkup_type" label="体检类型" width="150" />
-            <el-table-column prop="hospital" label="医院" width="180" />
-            <el-table-column prop="summary" label="总结" show-overflow-tooltip />
-            <el-table-column label="操作" width="150" fixed="right">
-              <template #default="{ row }">
-                <el-button link type="primary" size="small" @click="editCheckup(row)">U</el-button>
-                <el-button link type="danger" size="small" @click="deleteCheckup(row.id)">D</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-        </el-card>
-      </el-tab-pane>
-
-      <!-- 疫苗接种 -->
-      <el-tab-pane label="疫苗接种" name="vaccinations">
-        <el-card>
-          <template #header>
-            <div class="card-header">
-              <span>疫苗接种记录</span>
-              <el-button type="primary" @click="showVaccinationDialog">添加接种记录</el-button>
+          <div class="tab-pane-content">
+            <div class="section-header">
+              <h3>疫苗接种记录</h3>
+              <el-button type="primary" @click="showVaccinationDialog">添加记录</el-button>
             </div>
-          </template>
-          
-          <el-table :data="vaccinations" stripe>
-            <el-table-column prop="vaccine_name" label="疫苗名称" width="180" />
-            <el-table-column prop="vaccination_date" label="接种日期" width="120" />
-            <el-table-column prop="hospital" label="接种地点" width="180" />
-            <el-table-column prop="batch_number" label="批次号" width="120" />
-            <el-table-column prop="next_dose_date" label="下次接种" width="120" />
-            <el-table-column label="操作" width="150" fixed="right">
-              <template #default="{ row }">
-                <el-button link type="primary" size="small" @click="editVaccination(row)">U</el-button>
-                <el-button link type="danger" size="small" @click="deleteVaccination(row.id)">D</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-        </el-card>
-      </el-tab-pane>
-    </el-tabs>
+            
+            <el-table :data="vaccinations" stripe class="custom-table">
+              <el-table-column prop="vaccine_name" label="疫苗名称" width="200" />
+              <el-table-column prop="vaccination_date" label="接种日期" width="150" />
+              <el-table-column prop="hospital" label="接种地点" width="200" />
+              <el-table-column prop="batch_number" label="批次号" width="150" />
+              <el-table-column prop="next_dose_date" label="下次接种" width="150" />
+              <el-table-column label="操作" width="150" align="center">
+                <template #default="{ row }">
+                  <el-button link type="primary" @click="editVaccination(row)">编辑</el-button>
+                  <el-button link type="danger" @click="deleteVaccination(row.id)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </el-tab-pane>
+      </el-tabs>
+    </div>
 
-    <!-- 过敏史对话框 -->
-    <el-dialog v-model="allergyDialogVisible" :title="editingAllergy ? '编辑过敏记录' : '添加过敏记录'" width="600px">
-      <el-form :model="allergyForm" label-width="100px">
+    <!-- Dialogs (Keeping logic, updating styles) -->
+    <el-dialog v-model="allergyDialogVisible" :title="editingAllergy ? '编辑过敏记录' : '添加过敏记录'" width="500px" class="custom-dialog">
+      <el-form :model="allergyForm" label-width="80px" label-position="top">
         <el-form-item label="过敏原" required>
           <el-input v-model="allergyForm.allergen" placeholder="如：青霉素、花生" />
         </el-form-item>
-        <el-form-item label="类型">
-          <el-select v-model="allergyForm.allergen_type" placeholder="请选择" clearable>
-            <el-option label="药物" value="药物" />
-            <el-option label="食物" value="食物" />
-            <el-option label="其他" value="其他" />
-          </el-select>
-        </el-form-item>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="类型">
+              <el-select v-model="allergyForm.allergen_type" placeholder="请选择" style="width: 100%">
+                <el-option label="药物" value="药物" />
+                <el-option label="食物" value="食物" />
+                <el-option label="其他" value="其他" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="严重程度">
+              <el-select v-model="allergyForm.severity" placeholder="请选择" style="width: 100%">
+                <el-option label="轻微" value="轻微" />
+                <el-option label="中等" value="中等" />
+                <el-option label="严重" value="严重" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-form-item label="过敏反应">
           <el-input v-model="allergyForm.reaction" type="textarea" :rows="2" placeholder="如：皮疹、呼吸困难" />
         </el-form-item>
-        <el-form-item label="严重程度">
-          <el-select v-model="allergyForm.severity" placeholder="请选择">
-            <el-option label="轻微" value="轻微" />
-            <el-option label="中等" value="中等" />
-            <el-option label="严重" value="严重" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="发现日期">
-          <el-date-picker v-model="allergyForm.discovered_date" type="date" placeholder="选择日期" />
+          <el-date-picker v-model="allergyForm.discovered_date" type="date" placeholder="选择日期" style="width: 100%" />
         </el-form-item>
         <el-form-item label="备注">
           <el-input v-model="allergyForm.notes" type="textarea" :rows="2" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="allergyDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveAllergy" :loading="saving">保存</el-button>
+        <div class="dialog-footer">
+          <el-button @click="allergyDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="saveAllergy" :loading="saving">保存</el-button>
+        </div>
       </template>
     </el-dialog>
 
-    <!-- 家族病史对话框 -->
-    <el-dialog v-model="familyHistoryDialogVisible" :title="editingFamilyHistory ? '编辑家族病史' : '添加家族病史'" width="600px">
-      <el-form :model="familyHistoryForm" label-width="100px">
+    <!-- Other dialogs follow similar pattern... -->
+    <el-dialog v-model="familyHistoryDialogVisible" :title="editingFamilyHistory ? '编辑家族病史' : '添加家族病史'" width="500px" class="custom-dialog">
+      <el-form :model="familyHistoryForm" label-width="80px" label-position="top">
         <el-form-item label="亲属关系" required>
-          <el-input v-model="familyHistoryForm.relative" placeholder="如：父亲、母亲、祖父" />
+          <el-input v-model="familyHistoryForm.relative" placeholder="如：父亲、母亲" />
         </el-form-item>
         <el-form-item label="疾病" required>
-          <el-input v-model="familyHistoryForm.disease" placeholder="如：高血压、糖尿病" />
+          <el-input v-model="familyHistoryForm.disease" placeholder="如：高血压" />
         </el-form-item>
         <el-form-item label="发病年龄">
-          <el-input-number v-model="familyHistoryForm.onset_age" :min="0" :max="150" />
+          <el-input-number v-model="familyHistoryForm.onset_age" :min="0" :max="150" style="width: 100%" />
         </el-form-item>
         <el-form-item label="备注">
           <el-input v-model="familyHistoryForm.notes" type="textarea" :rows="2" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="familyHistoryDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveFamilyHistory" :loading="saving">保存</el-button>
+        <div class="dialog-footer">
+          <el-button @click="familyHistoryDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="saveFamilyHistory" :loading="saving">保存</el-button>
+        </div>
       </template>
     </el-dialog>
 
-    <!-- 手术记录对话框 -->
-    <el-dialog v-model="surgeryDialogVisible" :title="editingSurgery ? '编辑手术记录' : '添加手术记录'" width="600px">
-      <el-form :model="surgeryForm" label-width="100px">
+    <el-dialog v-model="surgeryDialogVisible" :title="editingSurgery ? '编辑手术记录' : '添加手术记录'" width="500px" class="custom-dialog">
+      <el-form :model="surgeryForm" label-width="80px" label-position="top">
         <el-form-item label="手术名称" required>
           <el-input v-model="surgeryForm.surgery_name" placeholder="如：阑尾切除术" />
         </el-form-item>
         <el-form-item label="手术日期" required>
-          <el-date-picker v-model="surgeryForm.surgery_date" type="date" placeholder="选择日期" />
+          <el-date-picker v-model="surgeryForm.surgery_date" type="date" placeholder="选择日期" style="width: 100%" />
         </el-form-item>
-        <el-form-item label="医院">
-          <el-input v-model="surgeryForm.hospital" placeholder="医院名称" />
-        </el-form-item>
-        <el-form-item label="主刀医生">
-          <el-input v-model="surgeryForm.doctor" placeholder="医生姓名" />
-        </el-form-item>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="医院">
+              <el-input v-model="surgeryForm.hospital" placeholder="医院名称" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="主刀医生">
+              <el-input v-model="surgeryForm.doctor" placeholder="医生姓名" />
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-form-item label="备注">
           <el-input v-model="surgeryForm.notes" type="textarea" :rows="2" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="surgeryDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveSurgery" :loading="saving">保存</el-button>
+        <div class="dialog-footer">
+          <el-button @click="surgeryDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="saveSurgery" :loading="saving">保存</el-button>
+        </div>
       </template>
     </el-dialog>
 
-    <!-- 体检报告对话框 -->
-    <el-dialog v-model="checkupDialogVisible" :title="editingCheckup ? '编辑体检报告' : '添加体检报告'" width="600px">
-      <el-form :model="checkupForm" label-width="100px">
+    <el-dialog v-model="checkupDialogVisible" :title="editingCheckup ? '编辑体检报告' : '添加体检报告'" width="500px" class="custom-dialog">
+      <el-form :model="checkupForm" label-width="80px" label-position="top">
         <el-form-item label="体检日期" required>
-          <el-date-picker v-model="checkupForm.checkup_date" type="date" placeholder="选择日期" />
+          <el-date-picker v-model="checkupForm.checkup_date" type="date" placeholder="选择日期" style="width: 100%" />
         </el-form-item>
         <el-form-item label="体检类型">
-          <el-input v-model="checkupForm.checkup_type" placeholder="如：入职体检、年度体检" />
+          <el-input v-model="checkupForm.checkup_type" placeholder="如：入职体检" />
         </el-form-item>
         <el-form-item label="医院">
           <el-input v-model="checkupForm.hospital" placeholder="医院名称" />
@@ -347,36 +377,45 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="checkupDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveCheckup" :loading="saving">保存</el-button>
+        <div class="dialog-footer">
+          <el-button @click="checkupDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="saveCheckup" :loading="saving">保存</el-button>
+        </div>
       </template>
     </el-dialog>
 
-    <!-- 疫苗接种对话框 -->
-    <el-dialog v-model="vaccinationDialogVisible" :title="editingVaccination ? '编辑接种记录' : '添加接种记录'" width="600px">
-      <el-form :model="vaccinationForm" label-width="100px">
+    <el-dialog v-model="vaccinationDialogVisible" :title="editingVaccination ? '编辑接种记录' : '添加接种记录'" width="500px" class="custom-dialog">
+      <el-form :model="vaccinationForm" label-width="80px" label-position="top">
         <el-form-item label="疫苗名称" required>
-          <el-input v-model="vaccinationForm.vaccine_name" placeholder="如：新冠疫苗、流感疫苗" />
+          <el-input v-model="vaccinationForm.vaccine_name" placeholder="如：流感疫苗" />
         </el-form-item>
         <el-form-item label="接种日期" required>
-          <el-date-picker v-model="vaccinationForm.vaccination_date" type="date" placeholder="选择日期" />
+          <el-date-picker v-model="vaccinationForm.vaccination_date" type="date" placeholder="选择日期" style="width: 100%" />
         </el-form-item>
         <el-form-item label="接种地点">
           <el-input v-model="vaccinationForm.hospital" placeholder="医院或社区卫生服务中心" />
         </el-form-item>
-        <el-form-item label="批次号">
-          <el-input v-model="vaccinationForm.batch_number" placeholder="疫苗批次号" />
-        </el-form-item>
-        <el-form-item label="下次接种">
-          <el-date-picker v-model="vaccinationForm.next_dose_date" type="date" placeholder="选择日期" />
-        </el-form-item>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="批次号">
+              <el-input v-model="vaccinationForm.batch_number" placeholder="疫苗批次号" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="下次接种">
+              <el-date-picker v-model="vaccinationForm.next_dose_date" type="date" placeholder="选择日期" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-form-item label="备注">
           <el-input v-model="vaccinationForm.notes" type="textarea" :rows="2" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="vaccinationDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveVaccination" :loading="saving">保存</el-button>
+        <div class="dialog-footer">
+          <el-button @click="vaccinationDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="saveVaccination" :loading="saving">保存</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
@@ -387,7 +426,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { healthProfileAPI } from '@/api'
-import { useUserStore } from '@/stores/user'
+import { User, Warning, Connection, KnifeFork, DocumentChecked, Aim } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const activeTab = ref('basic')
@@ -416,6 +455,31 @@ const bmi = computed(() => {
   }
   return '-'
 })
+
+function getBMIType(bmi: string) {
+  if (bmi === '-') return 'info'
+  const val = parseFloat(bmi)
+  if (val < 18.5) return 'warning'
+  if (val < 24) return 'success'
+  if (val < 28) return 'warning'
+  return 'danger'
+}
+
+function getBMIStatus(bmi: string) {
+  if (bmi === '-') return '未知'
+  const val = parseFloat(bmi)
+  if (val < 18.5) return '偏瘦'
+  if (val < 24) return '正常'
+  if (val < 28) return '超重'
+  return '肥胖'
+}
+
+function getSeverityType(severity: string) {
+  if (severity === '严重') return 'danger'
+  if (severity === '中等') return 'warning'
+  if (severity === '轻微') return 'success'
+  return 'info'
+}
 
 // 过敏史
 const allergies = ref<any[]>([])
@@ -478,6 +542,10 @@ const vaccinationForm = ref({
   notes: null
 })
 
+onMounted(async () => {
+  await loadData()
+})
+
 // 加载数据
 async function loadData() {
   try {
@@ -509,30 +577,13 @@ async function loadData() {
 
 // 保存基本信息
 async function saveBasicInfo() {
-  // 防止重复提交
-  if (saving.value) {
-    console.log('⚠️ 正在保存中，请勿重复点击')
-    return
-  }
-  
+  if (saving.value) return
   saving.value = true
   try {
-    console.log('📤 提交的数据:', JSON.stringify(basicInfo.value, null, 2))
-    const result = await healthProfileAPI.createOrUpdate(basicInfo.value)
-    console.log('✅ 保存成功:', result)
+    await healthProfileAPI.createOrUpdate(basicInfo.value)
     ElMessage.success('保存成功')
   } catch (error: any) {
-    console.error('❌ 保存失败:', error)
-    console.error('❌ 错误详情:', {
-      message: error.message,
-      response: error.response,
-      status: error.response?.status,
-      data: error.response?.data
-    })
-    
-    const errorMsg = error.response?.data?.detail || error.message || '保存失败'
-    console.error('❌ 显示错误消息:', errorMsg)
-    ElMessage.error(errorMsg)
+    ElMessage.error(error.response?.data?.detail || '保存失败')
   } finally {
     saving.value = false
   }
@@ -566,7 +617,6 @@ async function saveAllergy() {
   
   saving.value = true
   try {
-    // 处理日期格式
     const submitData = { ...allergyForm.value }
     if (submitData.discovered_date && submitData.discovered_date instanceof Date) {
       const d = submitData.discovered_date
@@ -590,17 +640,11 @@ async function saveAllergy() {
 
 async function deleteAllergy(id: number) {
   try {
-    await ElMessageBox.confirm('确定要删除这条过敏记录吗？', '提示', {
-      type: 'warning'
-    })
+    await ElMessageBox.confirm('确定要删除这条过敏记录吗？', '提示', { type: 'warning' })
     await healthProfileAPI.allergies.delete(id)
     ElMessage.success('删除成功')
     await loadData()
-  } catch (error: any) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.response?.data?.detail || '删除失败')
-    }
-  }
+  } catch (error) {}
 }
 
 // 家族病史相关
@@ -646,17 +690,11 @@ async function saveFamilyHistory() {
 
 async function deleteFamilyHistory(id: number) {
   try {
-    await ElMessageBox.confirm('确定要删除这条家族病史吗？', '提示', {
-      type: 'warning'
-    })
+    await ElMessageBox.confirm('确定要删除这条家族病史吗？', '提示', { type: 'warning' })
     await healthProfileAPI.familyHistory.delete(id)
     ElMessage.success('删除成功')
     await loadData()
-  } catch (error: any) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.response?.data?.detail || '删除失败')
-    }
-  }
+  } catch (error) {}
 }
 
 // 手术记录相关
@@ -686,7 +724,6 @@ async function saveSurgery() {
   
   saving.value = true
   try {
-    // 处理日期格式
     const submitData = { ...surgeryForm.value }
     if (submitData.surgery_date && submitData.surgery_date instanceof Date) {
       const d = submitData.surgery_date
@@ -710,17 +747,11 @@ async function saveSurgery() {
 
 async function deleteSurgery(id: number) {
   try {
-    await ElMessageBox.confirm('确定要删除这条手术记录吗？', '提示', {
-      type: 'warning'
-    })
+    await ElMessageBox.confirm('确定要删除这条手术记录吗？', '提示', { type: 'warning' })
     await healthProfileAPI.surgeries.delete(id)
     ElMessage.success('删除成功')
     await loadData()
-  } catch (error: any) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.response?.data?.detail || '删除失败')
-    }
-  }
+  } catch (error) {}
 }
 
 // 体检报告相关
@@ -750,7 +781,6 @@ async function saveCheckup() {
   
   saving.value = true
   try {
-    // 处理日期格式
     const submitData = { ...checkupForm.value }
     if (submitData.checkup_date && submitData.checkup_date instanceof Date) {
       const d = submitData.checkup_date
@@ -774,17 +804,11 @@ async function saveCheckup() {
 
 async function deleteCheckup(id: number) {
   try {
-    await ElMessageBox.confirm('确定要删除这条体检报告吗？', '提示', {
-      type: 'warning'
-    })
+    await ElMessageBox.confirm('确定要删除这条体检报告吗？', '提示', { type: 'warning' })
     await healthProfileAPI.checkups.delete(id)
     ElMessage.success('删除成功')
     await loadData()
-  } catch (error: any) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.response?.data?.detail || '删除失败')
-    }
-  }
+  } catch (error) {}
 }
 
 // 疫苗接种相关
@@ -815,16 +839,11 @@ async function saveVaccination() {
   
   saving.value = true
   try {
-    // 处理日期格式
     const submitData = { ...vaccinationForm.value }
-    
-    // 接种日期
     if (submitData.vaccination_date && submitData.vaccination_date instanceof Date) {
       const d = submitData.vaccination_date
       submitData.vaccination_date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` as any
     }
-    
-    // 下次接种日期
     if (submitData.next_dose_date && submitData.next_dose_date instanceof Date) {
       const d = submitData.next_dose_date
       submitData.next_dose_date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` as any
@@ -847,72 +866,121 @@ async function saveVaccination() {
 
 async function deleteVaccination(id: number) {
   try {
-    await ElMessageBox.confirm('确定要删除这条接种记录吗？', '提示', {
-      type: 'warning'
-    })
+    await ElMessageBox.confirm('确定要删除这条接种记录吗？', '提示', { type: 'warning' })
     await healthProfileAPI.vaccinations.delete(id)
     ElMessage.success('删除成功')
     await loadData()
-  } catch (error: any) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.response?.data?.detail || '删除失败')
-    }
-  }
+  } catch (error) {}
 }
-
-onMounted(() => {
-  // 检查URL参数，设置默认标签页
-  const tabParam = route.query.tab as string
-  if (tabParam) {
-    activeTab.value = tabParam
-  }
-  loadData()
-})
 </script>
 
-<style scoped lang="scss">
+<style scoped>
 .health-profile-container {
-  padding: 20px;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.header-card {
-  margin-bottom: 20px;
-  
-  h2 {
-    margin: 0 0 8px 0;
-    font-size: 24px;
-    color: #303133;
-  }
-  
-  .subtitle {
-    margin: 0;
-    color: #909399;
-    font-size: 14px;
-  }
+.page-header {
+  margin-bottom: 32px;
 }
 
-.profile-tabs {
-  :deep(.el-tabs__header) {
-    margin-bottom: 20px;
-  }
-  
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    
-    span {
-      font-size: 16px;
-      font-weight: 500;
-    }
-  }
+.header-left h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-text-main);
+  margin: 0 0 8px 0;
 }
 
-:deep(.el-table) {
+.subtitle {
+  color: var(--color-text-secondary);
   font-size: 14px;
+  margin: 0;
 }
 
-:deep(.el-form-item) {
-  margin-bottom: 20px;
+/* Tabs */
+.profile-content {
+  background: white;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.custom-tabs {
+  border: none;
+  box-shadow: none;
+}
+
+.custom-tabs :deep(.el-tabs__header) {
+  background-color: #f9fafb;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.custom-tabs :deep(.el-tabs__item) {
+  height: 50px;
+  line-height: 50px;
+  font-size: 15px;
+  color: var(--color-text-secondary);
+}
+
+.custom-tabs :deep(.el-tabs__item.is-active) {
+  color: var(--color-primary);
+  background-color: white;
+  font-weight: 600;
+}
+
+.tab-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tab-pane-content {
+  padding: 24px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.section-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-main);
+}
+
+/* Form Styles */
+.custom-form {
+  max-width: 900px;
+}
+
+.pressure-inputs {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.separator {
+  color: var(--color-text-light);
+  font-weight: bold;
+}
+
+/* Table Styles */
+.custom-table {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+
+.custom-table :deep(th) {
+  background-color: #f9fafb;
+  color: var(--color-text-main);
+  font-weight: 600;
 }
 </style>

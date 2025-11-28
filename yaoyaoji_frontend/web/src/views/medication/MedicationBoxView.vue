@@ -1,98 +1,127 @@
 <template>
-  <div class="medication-box">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-      <h2>💊 我的药箱</h2>
-      <el-button type="primary" @click="handleAdd">添加药品</el-button>
+  <div class="medication-box-container">
+    <div class="action-bar">
+      <el-button type="primary" size="large" @click="handleAdd" class="add-btn">
+        <el-icon><Plus /></el-icon>
+        添加药品
+      </el-button>
     </div>
 
-    <div class="medication-list" style="margin-top: 20px">
-      <el-row :gutter="20">
-        <el-col :span="8" v-for="med in medicationStore.myMedications" :key="med.id">
-          <el-card class="medication-card">
-            <template #header>
-              <div class="card-header">
-                <span>{{ med.custom_name || med.medicine.name }}</span>
-                <div>
-                  <el-button type="primary" size="small" @click="handleEdit(med)">U</el-button>
-                  <el-button type="danger" size="small" @click="handleRemove(med.id)">D</el-button>
-                </div>
+    <div class="medication-grid" v-if="medicationStore.myMedications.length > 0">
+      <div 
+        v-for="med in medicationStore.myMedications" 
+        :key="med.id" 
+        class="medication-card"
+      >
+        <div class="card-image-wrapper" @click="openImageViewer(med.medicine.image_url)">
+          <el-image 
+            v-if="med.medicine.image_url"
+            :src="getImageUrl(med.medicine.image_url)" 
+            fit="cover"
+            class="medicine-image"
+          >
+            <template #error>
+              <div class="image-placeholder">
+                <el-icon><Picture /></el-icon>
               </div>
             </template>
-            
-            <!-- 药哅图片 -->
-            <div v-if="med.medicine.image_url" class="medicine-image-container">
-              <el-image 
-                :src="getImageUrl(med.medicine.image_url)" 
-                fit="contain"
-                class="medicine-image"
-                @click="openImageViewer(med.medicine.image_url)"
-              >
-                <template #error>
-                  <div class="image-error">
-                    <el-icon><Picture /></el-icon>
-                    <span>图片加载失败</span>
-                  </div>
-                </template>
-              </el-image>
-            </div>
-            
-            <p><strong>药品名:</strong> {{ med.medicine.name }}</p>
-            <p v-if="med.medicine.manufacturer"><strong>厂家:</strong> {{ med.medicine.manufacturer }}</p>
-            
-            <!-- 禁忌信息 -->
-            <div v-if="med.medicine.contraindications" style="margin: 10px 0;">
-              <el-tag type="warning" size="small">禁忌</el-tag>
-              <p style="margin-top: 5px; color: #e6a23c; font-size: 13px;">
-                {{ med.medicine.contraindications }}
-              </p>
-            </div>
-            
-            <p v-if="med.notes" style="margin-top: 10px;">
-              <strong>功效与备注:</strong> {{ med.notes }}
-            </p>
-          </el-card>
-        </el-col>
-      </el-row>
+          </el-image>
+          <div v-else class="image-placeholder">
+            <el-icon><FirstAidKit /></el-icon>
+          </div>
+          
+          <div class="card-actions">
+            <el-button circle size="small" type="primary" @click.stop="handleEdit(med)">
+              <el-icon><Edit /></el-icon>
+            </el-button>
+            <el-button circle size="small" type="danger" @click.stop="handleRemove(med.id)">
+              <el-icon><Delete /></el-icon>
+            </el-button>
+          </div>
+        </div>
 
-      <el-empty v-if="medicationStore.myMedications.length === 0" description="药箱是空的，快去添加药品吧！" />
+        <div class="card-content">
+          <h3 class="medicine-name">{{ med.custom_name || med.medicine.name }}</h3>
+          <p class="medicine-manufacturer" v-if="med.medicine.manufacturer">{{ med.medicine.manufacturer }}</p>
+          
+          <div class="contraindications-section" v-if="med.medicine.contraindications">
+            <div class="section-label">
+              <el-icon color="#E6A23C"><Warning /></el-icon>
+              <span>禁忌</span>
+            </div>
+            <p class="contraindications-text">{{ med.medicine.contraindications }}</p>
+          </div>
+
+          <div class="notes-section" v-if="med.notes">
+            <div class="section-label">备注</div>
+            <p class="notes-text">{{ med.notes }}</p>
+          </div>
+        </div>
+      </div>
     </div>
 
+    <el-empty 
+      v-else 
+      description="药箱是空的，快去添加药品吧！" 
+      :image-size="200"
+    >
+      <el-button type="primary" @click="handleAdd">立即添加</el-button>
+    </el-empty>
+
     <!-- 添加/编辑药品对话框 -->
-    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑药品' : '添加药品'" width="600px">
-      <el-form :model="form" :rules="formRules" ref="formRef" label-width="120px">
-        <el-form-item label="药品名称" prop="name" required>
-          <el-input v-model="form.name" placeholder="请输入药品名称" />
-        </el-form-item>
-        <el-form-item label="禁忌" prop="contraindications" required>
+    <el-dialog 
+      v-model="dialogVisible" 
+      :title="editingId ? '编辑药品' : '添加药品'" 
+      width="600px"
+      class="custom-dialog"
+      destroy-on-close
+    >
+      <el-form :model="form" :rules="formRules" ref="formRef" label-width="100px" label-position="top">
+        <el-row :gutter="20">
+          <el-col :span="16">
+            <el-form-item label="药品名称" prop="name" required>
+              <el-input v-model="form.name" placeholder="请输入药品名称" size="large" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+             <el-form-item label="厂家">
+              <el-input v-model="form.manufacturer" placeholder="可选" size="large" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-form-item label="禁忌信息" prop="contraindications" required>
           <el-input 
             v-model="form.contraindications" 
             type="textarea" 
             :rows="3"
-            placeholder="请输入药品禁忌信息" 
+            placeholder="请输入药品禁忌信息，这对AI医生判断很重要" 
           />
         </el-form-item>
-        <el-form-item label="厂家">
-          <el-input v-model="form.manufacturer" placeholder="请输入药品厂家(可选)" />
-        </el-form-item>
+
         <el-form-item label="药品包装图">
-          <el-upload
-            class="medicine-image-uploader"
-            :action="''"
-            :auto-upload="false"
-            :show-file-list="false"
-            :on-change="handleImageChange"
-            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-          >
-            <img v-if="form.image_url" :src="getImageUrl(form.image_url)" class="uploaded-image" />
-            <el-icon v-else class="image-uploader-icon"><Plus /></el-icon>
-          </el-upload>
-          <div style="margin-top: 8px; color: #909399; font-size: 12px;">
-            支持 JPG、PNG、GIF、WEBP 格式，最大 5MB
+          <div class="upload-wrapper">
+            <el-upload
+              class="medicine-image-uploader"
+              :action="''"
+              :auto-upload="false"
+              :show-file-list="false"
+              :on-change="handleImageChange"
+              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+            >
+              <img v-if="form.image_url" :src="getImageUrl(form.image_url)" class="uploaded-image" />
+              <div v-else class="upload-placeholder">
+                <el-icon class="upload-icon"><Plus /></el-icon>
+                <span>点击上传图片</span>
+              </div>
+            </el-upload>
+            <div class="upload-tip">
+              支持 JPG、PNG、WEBP 格式，最大 5MB
+              <el-button v-if="form.image_url" link type="danger" @click.stop="handleRemoveImage">删除图片</el-button>
+            </div>
           </div>
-          <el-button v-if="form.image_url" size="small" type="danger" text @click="handleRemoveImage">
-            删除图片
-          </el-button>
         </el-form-item>
+
         <el-form-item label="功效与备注">
           <el-input 
             v-model="form.notes" 
@@ -103,20 +132,28 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="handleCancel">取消</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="loading">
-          {{ editingId ? '确定修改' : '确定添加' }}
-        </el-button>
+        <div class="dialog-footer">
+          <el-button @click="handleCancel">取消</el-button>
+          <el-button type="primary" @click="handleSubmit" :loading="loading">
+            {{ editingId ? '保存修改' : '确认添加' }}
+          </el-button>
+        </div>
       </template>
     </el-dialog>
-    <el-image-viewer v-if="imageViewerVisible" :url-list="imageViewerList" :key="imageViewerList[0]" @close="imageViewerVisible=false" />
+
+    <el-image-viewer 
+      v-if="imageViewerVisible" 
+      :url-list="imageViewerList" 
+      :initial-index="0"
+      @close="imageViewerVisible=false" 
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Picture } from '@element-plus/icons-vue'
+import { Plus, Picture, Edit, Delete, FirstAidKit, Warning } from '@element-plus/icons-vue'
 import { useMedicationStore } from '@/stores/medication'
 import { uploadAPI } from '@/api'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -128,19 +165,10 @@ const dialogVisible = ref(false)
 const loading = ref(false)
 const formRef = ref<FormInstance>()
 const uploadedFile = ref<File | null>(null)
-const editingId = ref<number | null>(null) // 当前编辑的药品ID
+const editingId = ref<number | null>(null)
 
-// 解决预览放大时闪动：为每个药品维持稳定的预览数组引用
+// 解决预览放大时闪动
 const previewSrcListMap = reactive<Record<number, string[]>>({})
-function ensurePreviewList(id: number, url?: string): string[] {
-  const existing = previewSrcListMap[id]
-  if (existing) return existing
-  if (url) {
-    previewSrcListMap[id] = [getImageUrl(url)]
-    return previewSrcListMap[id]
-  }
-  return []
-}
 
 watch(
   () => medicationStore.myMedications.map(m => ({ id: m.id, url: m.medicine.image_url })),
@@ -156,7 +184,6 @@ watch(
   { deep: false, immediate: true }
 )
 
-// 全局单例图片预览，确保多次点击仅保留一个预览
 const imageViewerVisible = ref(false)
 const imageViewerList = ref<string[]>([])
 function openImageViewer(url?: string) {
@@ -165,7 +192,6 @@ function openImageViewer(url?: string) {
   imageViewerList.value = [full]
   imageViewerVisible.value = true
 }
-
 
 const form = reactive<CreateMedicineData>({
   name: '',
@@ -189,28 +215,23 @@ onMounted(async () => {
   await medicationStore.fetchMyMedications()
 })
 
-// 处理图片选择
 async function handleImageChange(file: UploadFile) {
   if (!file.raw) return
   
-  // 检查文件大小
   const maxSize = 5 * 1024 * 1024 // 5MB
   if (file.raw.size > maxSize) {
     ElMessage.error('图片大小不能超过 5MB')
     return
   }
   
-  // 检查文件类型
   const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
   if (!allowedTypes.includes(file.raw.type)) {
     ElMessage.error('只支持 JPG、PNG、GIF、WEBP 格式的图片')
     return
   }
   
-  // 保存文件引用
   uploadedFile.value = file.raw
   
-  // 预览图片
   const reader = new FileReader()
   reader.onload = (e) => {
     form.image_url = e.target?.result as string
@@ -218,50 +239,39 @@ async function handleImageChange(file: UploadFile) {
   reader.readAsDataURL(file.raw)
 }
 
-// 删除图片
 function handleRemoveImage() {
   form.image_url = ''
   uploadedFile.value = null
 }
 
-// 获取图片URL（处理本地和服务器图片）
 function getImageUrl(url: string): string {
   if (!url) return ''
-  // 如果是base64或完整URL，直接返回
   if (url.startsWith('data:') || url.startsWith('http')) {
     return url
   }
-  // 否则拼接后端域名
   return `http://localhost:8000${url}`
 }
 
-// 处理添加
 function handleAdd() {
   resetForm()
   dialogVisible.value = true
 }
 
-// 处理编辑
 function handleEdit(med: any) {
   editingId.value = med.id
-  
-  // 填充表单数据（所有字段均可编辑）
   form.name = med.medicine.name
   form.contraindications = med.medicine.contraindications
   form.manufacturer = med.medicine.manufacturer || ''
   form.image_url = med.medicine.image_url || ''
   form.notes = med.notes || ''
-  
   dialogVisible.value = true
 }
 
-// 取消操作
 function handleCancel() {
   dialogVisible.value = false
   resetForm()
 }
 
-// 重置表单
 function resetForm() {
   formRef.value?.resetFields()
   form.name = ''
@@ -273,7 +283,6 @@ function resetForm() {
   editingId.value = null
 }
 
-// 统一的提交处理
 async function handleSubmit() {
   if (!formRef.value) return
   
@@ -282,7 +291,6 @@ async function handleSubmit() {
     
     loading.value = true
     try {
-      // 如果有上传的图片，先上传图片
       let imageUrl = ''
       if (uploadedFile.value) {
         try {
@@ -297,7 +305,6 @@ async function handleSubmit() {
       }
       
       if (editingId.value) {
-        // 编辑模式：更新所有字段
         const updateData: any = {
           medicine_name: form.name,
           contraindications: form.contraindications,
@@ -305,11 +312,9 @@ async function handleSubmit() {
           notes: form.notes || undefined
         }
         
-        // 如果上传了新图片，使用新图片URL
         if (imageUrl) {
           updateData.image_url = imageUrl
         } else if (form.image_url && !form.image_url.startsWith('data:')) {
-          // 如果没有上传新图片但有现有图片，保持原有图片
           updateData.image_url = form.image_url
         }
         
@@ -318,7 +323,6 @@ async function handleSubmit() {
         dialogVisible.value = false
         resetForm()
       } else {
-        // 添加模式：创建新药哅
         await medicationStore.createAndAddMedication({
           name: form.name,
           contraindications: form.contraindications,
@@ -347,120 +351,252 @@ async function handleSubmit() {
 }
 
 async function handleRemove(id: number) {
-  await ElMessageBox.confirm('确定要移除这个药品吗？', '提示', {
-    type: 'warning'
-  })
-  
-  await medicationStore.removeMedication(id)
-  ElMessage.success('移除成功')
+  try {
+    await ElMessageBox.confirm('确定要移除这个药品吗？', '提示', {
+      type: 'warning',
+      confirmButtonText: '确定',
+      cancelButtonText: '取消'
+    })
+    
+    await medicationStore.removeMedication(id)
+    ElMessage.success('移除成功')
+  } catch (error) {
+    // Cancelled
+  }
 }
 </script>
 
 <style scoped>
-.medication-box {
+.medication-box-container {
   width: 100%;
-  height: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.medication-card {
-  margin-bottom: 20px;
-  transition: all 0.3s;
-}
-
-.medication-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px);
-}
-
-.card-header {
+.page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 32px;
 }
 
-.card-header > div {
+.header-left h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-text-main);
+  margin: 0 0 8px 0;
+}
+
+.subtitle {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Action Bar */
+.action-bar {
   display: flex;
-  gap: 8px;
+  justify-content: flex-end;
+  margin-bottom: 24px;
 }
 
-.medication-list {
-  margin-top: 20px;
+.add-btn {
+  box-shadow: var(--shadow-sm);
 }
 
-/* 药哅图片容器 */
-.medicine-image-container {
-  width: 100%;
-  height: 180px;
-  margin-bottom: 12px;
-  background: #f5f7fa;
-  border-radius: 8px;
+/* Grid Layout */
+.medication-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.medication-card {
+  background: white;
+  border-radius: var(--radius-md);
   overflow: hidden;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.3s, box-shadow 0.3s;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+}
+
+.medication-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Card Image */
+.card-image-wrapper {
+  height: 180px;
+  background-color: #f8f9fa;
   position: relative;
+  overflow: hidden;
+  cursor: pointer;
 }
 
 .medicine-image {
   width: 100%;
   height: 100%;
+  transition: transform 0.5s;
 }
 
-.medicine-image :deep(.el-image__inner) {
+.card-image-wrapper:hover .medicine-image {
+  transform: scale(1.05);
+}
+
+.image-placeholder {
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  padding: 8px;
-}
-
-/* 图片加载失败样式 */
-.image-error {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #909399;
-  font-size: 14px;
+  color: #dcdfe6;
+  font-size: 48px;
+  background-color: #f5f7fa;
 }
 
-.image-error .el-icon {
-  font-size: 40px;
-  margin-bottom: 8px;
+/* Card Actions Overlay */
+.card-actions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s;
 }
 
-.medication-card p {
-  margin: 8px 0;
-  font-size: 14px;
+.medication-card:hover .card-actions {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Card Content */
+.card-content {
+  padding: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.medicine-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-main);
+  margin: 0 0 4px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.medicine-manufacturer {
+  font-size: 12px;
+  color: var(--color-text-light);
+  margin: 0 0 12px 0;
+}
+
+.tags-container {
+  margin-bottom: 12px;
+}
+
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+}
+
+.contraindications-section {
+  background-color: #fff7ed;
+  border-left: 3px solid #E6A23C;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border-radius: 4px;
+}
+
+.contraindications-text {
+  font-size: 13px;
+  color: #78350f;
   line-height: 1.5;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-/* 图片上传组件样式 */
+.notes-section {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+.notes-text {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+}
+
+/* Upload Styles */
+.upload-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .medicine-image-uploader :deep(.el-upload) {
   border: 1px dashed var(--el-border-color);
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   position: relative;
   overflow: hidden;
   transition: var(--el-transition-duration-fast);
-  width: 178px;
-  height: 178px;
+  width: 120px;
+  height: 120px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: #f8f9fa;
 }
 
 .medicine-image-uploader :deep(.el-upload:hover) {
-  border-color: var(--el-color-primary);
+  border-color: var(--color-primary);
+  background-color: #f0f9ff;
 }
 
-.image-uploader-icon {
-  font-size: 28px;
-  color: #8c939d;
+.upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #909399;
+  font-size: 12px;
+}
+
+.upload-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
 }
 
 .uploaded-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.upload-tip {
+  font-size: 12px;
+  color: var(--color-text-light);
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 </style>
