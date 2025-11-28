@@ -46,4 +46,4 @@ ENV/
 .DS_Store
 
 # 上传文件
-uploads/
+# uploads/

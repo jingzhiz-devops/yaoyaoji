@@ -7,12 +7,10 @@ except ImportError:
     OpenAI = None
 import os
 from datetime import datetime
+from ..config import settings
 
 router = APIRouter(prefix="/api/ai", tags=["AI医生"])
 
-# DeepSeek API配置
-DEEPSEEK_API_KEY = "sk-039cd2e9ea744b1fb01eb4b91e04ac53"
-DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 
 class SymptomRequest(BaseModel):
     """症状描述请求"""
@@ -53,8 +51,8 @@ async def ai_medical_predict(request: SymptomRequest):
     try:
         # 初始化DeepSeek客户端
         client = OpenAI(
-            api_key=DEEPSEEK_API_KEY,
-            base_url=DEEPSEEK_BASE_URL,
+            api_key=settings.DEEPSEEK_API_KEY,
+            base_url=settings.DEEPSEEK_BASE_URL,
             timeout=30.0  # 设置30秒超时
         )
         
@@ -184,8 +182,8 @@ async def ai_query_medicine(request: MedicineQueryRequest):
     
     try:
         client = OpenAI(
-            api_key=DEEPSEEK_API_KEY,
-            base_url=DEEPSEEK_BASE_URL,
+            api_key=settings.DEEPSEEK_API_KEY,
+            base_url=settings.DEEPSEEK_BASE_URL,
             timeout=30.0
         )
         
@@ -254,8 +252,8 @@ async def ai_query_disease(request: DiseaseQueryRequest):
     
     try:
         client = OpenAI(
-            api_key=DEEPSEEK_API_KEY,
-            base_url=DEEPSEEK_BASE_URL,
+            api_key=settings.DEEPSEEK_API_KEY,
+            base_url=settings.DEEPSEEK_BASE_URL,
             timeout=30.0
         )
         
