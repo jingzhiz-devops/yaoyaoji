@@ -1,62 +1,89 @@
 <template>
-  <div class="schedule-view">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-      <h2>📅 用药提醒</h2>
-      <el-button type="primary" @click="dialogVisible = true">创建提醒</el-button>
+  <div class="schedule-view-container">
+    <div class="action-bar">
+      <el-button type="primary" size="large" @click="dialogVisible = true" class="add-btn">
+        <el-icon><Plus /></el-icon>
+        创建提醒
+      </el-button>
     </div>
 
-      <div v-if="upcomingReminders.length > 0" class="reminder-banner">
-        <div class="reminder-content">
-          <span class="reminder-icon">⏰</span>
-          <span class="reminder-text">
-            5分钟内即将服用：
-            <span v-for="item in upcomingReminders" :key="item.key" class="reminder-item">
-              {{ item.name }}（{{ item.time.substring(0, 5) }}）
+    <div v-if="upcomingReminders.length > 0" class="reminder-banner">
+      <div class="banner-content">
+        <div class="banner-icon">
+          <el-icon class="swing-icon"><AlarmClock /></el-icon>
+        </div>
+        <div class="banner-text">
+          <span class="banner-title">即将服药提醒</span>
+          <div class="banner-items">
+            <span v-for="item in upcomingReminders" :key="item.key" class="reminder-tag">
+              {{ item.name }} {{ item.time.substring(0, 5) }}
             </span>
-          </span>
+          </div>
         </div>
       </div>
-    <div class="schedule-list" style="margin-top: 20px">
-      <el-table :data="schedules" style="width: 100%">
-        <el-table-column prop="medication.custom_name" label="药品名称" width="200">
-          <template #default="{ row }">
-            {{ row.user_medication?.custom_name || row.user_medication?.medicine?.name || '未知' }}
-          </template>
-        </el-table-column>
-        <el-table-column label="频率" width="120">
-          <template #default="{ row }">
-            {{ formatFrequency(row.frequency) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="scheduled_times" label="服药时间" width="200">
-          <template #default="{ row }">
-            <div v-if="Array.isArray(row.scheduled_times)" style="display: flex; flex-wrap: wrap; gap: 5px;">
-              <el-tag v-for="(time, index) in row.scheduled_times" :key="index" size="small" type="info">
+    </div>
+
+    <div class="schedule-list">
+      <el-card v-for="row in schedules" :key="row.id" class="schedule-card" shadow="hover">
+        <div class="schedule-card-content">
+          <div class="schedule-info">
+            <div class="medicine-name-row">
+              <h3>{{ row.user_medication?.custom_name || row.user_medication?.medicine?.name || '未知药品' }}</h3>
+              <el-tag size="small" effect="plain">{{ formatFrequency(row.frequency) }}</el-tag>
+            </div>
+            <div class="schedule-details">
+              <div class="detail-item">
+                <el-icon><Calendar /></el-icon>
+                <span>{{ row.start_date }} <span v-if="row.end_date">至 {{ row.end_date }}</span></span>
+              </div>
+              <div class="detail-item">
+                <el-icon><Dish /></el-icon>
+                <span>{{ row.dose }}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="schedule-times">
+            <div class="time-label">服药时间</div>
+            <div class="time-tags">
+              <el-tag 
+                v-for="(time, index) in row.scheduled_times" 
+                :key="index" 
+                effect="light"
+                :type="getTimeStatus(time)"
+              >
                 {{ time.substring(0, 5) }}
               </el-tag>
             </div>
-            <span v-else>{{ row.scheduled_times }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="dose" label="剂量" width="120" />
-        <el-table-column prop="start_date" label="开始日期" width="120" />
-        <el-table-column prop="end_date" label="结束日期" width="120" />
-        <el-table-column label="操作" width="180">
-          <template #default="{ row }">
-            <el-button type="primary" size="small" @click="handleEdit(row)">U</el-button>
-            <el-button type="danger" size="small" @click="handleDelete(row.id)">D</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+          </div>
 
-      <el-empty v-if="schedules.length === 0" description="暂无用药提醒，快去创建吧！" />
+          <div class="schedule-actions">
+            <el-button circle type="primary" plain @click="handleEdit(row)">
+              <el-icon><Edit /></el-icon>
+            </el-button>
+            <el-button circle type="danger" plain @click="handleDelete(row.id)">
+              <el-icon><Delete /></el-icon>
+            </el-button>
+          </div>
+        </div>
+      </el-card>
+
+      <el-empty v-if="schedules.length === 0" description="暂无用药提醒，快去创建吧！" :image-size="200">
+        <el-button type="primary" @click="dialogVisible = true">立即创建</el-button>
+      </el-empty>
     </div>
 
     <!-- 创建/编辑计划对话框 -->
-    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑用药提醒' : '创建用药提醒'" width="600px">
-      <el-form :model="form" label-width="100px">
-        <el-form-item label="选择药品">
-          <el-select v-model="form.user_medication_id" placeholder="请选择药品" style="width: 100%">
+    <el-dialog 
+      v-model="dialogVisible" 
+      :title="editingId ? '编辑用药提醒' : '创建用药提醒'" 
+      width="600px"
+      class="custom-dialog"
+      destroy-on-close
+    >
+      <el-form :model="form" label-width="100px" label-position="top">
+        <el-form-item label="选择药品" required>
+          <el-select v-model="form.user_medication_id" placeholder="请选择药品" style="width: 100%" size="large">
             <el-option
               v-for="med in medications"
               :key="med.id"
@@ -65,41 +92,62 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="频率">
-          <el-select v-model="form.frequency" placeholder="请选择频率" style="width: 100%" @change="handleFrequencyChange">
-            <el-option label="每天一次" value="once_daily" />
-            <el-option label="每天两次" value="twice_daily" />
-            <el-option label="每天三次" value="three_times_daily" />
-            <el-option label="每天四次" value="four_times_daily" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="服药时间">
-          <div v-for="(time, index) in form.scheduled_times" :key="index" style="margin-bottom: 10px">
-            <el-time-picker
-              v-model="form.scheduled_times[index]"
-              :placeholder="`选择第${index + 1}次服药时间`"
-              format="HH:mm"
-              value-format="HH:mm:00"
-              style="width: 100%"
-            />
+        
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="服药频率" required>
+              <el-select v-model="form.frequency" placeholder="请选择频率" style="width: 100%" @change="handleFrequencyChange">
+                <el-option label="每天一次" value="once_daily" />
+                <el-option label="每天两次" value="twice_daily" />
+                <el-option label="每天三次" value="three_times_daily" />
+                <el-option label="每天四次" value="four_times_daily" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="单次剂量" required>
+              <el-input v-model="form.dose" placeholder="例如：1片、10ml" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-form-item label="服药时间" required>
+          <div class="time-picker-grid">
+            <div v-for="(time, index) in form.scheduled_times" :key="index" class="time-picker-item">
+              <span class="time-index">第 {{ index + 1 }} 次</span>
+              <el-time-picker
+                v-model="form.scheduled_times[index]"
+                placeholder="选择时间"
+                format="HH:mm"
+                value-format="HH:mm:00"
+                style="width: 100%"
+              />
+            </div>
           </div>
         </el-form-item>
-        <el-form-item label="剂量">
-          <el-input v-model="form.dose" placeholder="例如：1片、10ml" />
-        </el-form-item>
-        <el-form-item label="开始日期">
-          <el-date-picker v-model="form.start_date" type="date" placeholder="选择开始日期" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="结束日期">
-          <el-date-picker v-model="form.end_date" type="date" placeholder="选择结束日期(可选)" style="width: 100%" />
-        </el-form-item>
+
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="开始日期" required>
+              <el-date-picker v-model="form.start_date" type="date" placeholder="选择开始日期" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="结束日期">
+              <el-date-picker v-model="form.end_date" type="date" placeholder="可选，留空则长期" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
         <el-form-item label="备注">
-          <el-input v-model="form.notes" type="textarea" placeholder="用药备注(可选)" />
+          <el-input v-model="form.notes" type="textarea" :rows="2" placeholder="例如：饭后服用、忌辛辣等(可选)" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit">确定</el-button>
+        <div class="dialog-footer">
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleSubmit">确定</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
@@ -109,6 +157,7 @@
 import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { scheduleAPI, userMedicationAPI } from '@/api'
+import { Plus, AlarmClock, Calendar, Dish, Edit, Delete } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 
 const dialogVisible = ref(false)
@@ -116,7 +165,7 @@ const schedules = ref<any[]>([])
 const medications = ref<any[]>([])
 const editingId = ref<number | null>(null)
 
-// 提前5分钟提醒：用于计算5分钟内即将服用的药物
+// 提前5分钟提醒
 const nowTs = ref(Date.now())
 let reminderTimer: any = null
 
@@ -128,7 +177,6 @@ const upcomingReminders = computed(() => {
 
   const result: Array<{ key: string; name: string; time: string }> = []
   schedules.value.forEach((s: any) => {
-    // 仅在计划日期范围内提醒
     const start = new Date(s.start_date)
     start.setHours(0, 0, 0, 0)
     const end = s.end_date ? new Date(s.end_date) : null
@@ -142,7 +190,6 @@ const upcomingReminders = computed(() => {
         const [h, m] = t.split(':').map(Number)
         const minutes = h * 60 + m
         const delta = minutes - currentMinutes
-        // 提前5分钟提醒窗口：0 <= delta <= 5
         if (delta >= 0 && delta <= 5) {
           result.push({ key: `${s.id}-${idx}-${t}`, name, time: t })
         }
@@ -152,7 +199,7 @@ const upcomingReminders = computed(() => {
   return result
 })
 
-// 语音提醒（Web Speech API）：在提醒窗口内播报提示语
+// 语音提醒
 const announcedKeys = new Set<string>()
 function speakGentle(text: string, repeats = 3) {
   if ('speechSynthesis' in window) {
@@ -175,7 +222,6 @@ watch(upcomingReminders, (list) => {
     if (!announcedKeys.has(item.key)) {
       speakGentle(`主人，现在是北京时间 ${dayjs().format('HH:mm')}，该吃 ${item.name} 啦`, 3)
       announcedKeys.add(item.key)
-      // 5分钟后允许再次播报该条提醒
       setTimeout(() => announcedKeys.delete(item.key), 5 * 60 * 1000)
     }
   })
@@ -194,7 +240,6 @@ const form = reactive({
 onMounted(async () => {
   await fetchSchedules()
   await fetchMedications()
-  // 定时刷新当前时间，驱动提醒横幅自动更新
   reminderTimer = setInterval(() => {
     nowTs.value = Date.now()
   }, 15000)
@@ -213,8 +258,7 @@ async function fetchSchedules() {
     schedules.value = data
   } catch (error: any) {
     console.error('获取用药提醒失败:', error)
-    const errorMsg = error.response?.data?.detail || '获取用药提醒失败'
-    ElMessage.error(errorMsg)
+    ElMessage.error(error.response?.data?.detail || '获取用药提醒失败')
   }
 }
 
@@ -224,8 +268,7 @@ async function fetchMedications() {
     medications.value = data
   } catch (error: any) {
     console.error('获取药品列表失败:', error)
-    const errorMsg = error.response?.data?.detail || '获取药品列表失败'
-    ElMessage.error(errorMsg)
+    ElMessage.error(error.response?.data?.detail || '获取药品列表失败')
   }
 }
 
@@ -235,7 +278,6 @@ async function handleSubmit() {
     return
   }
 
-  // 验证时间数量与频率匹配
   const expectedCount = getExpectedTimeCount(form.frequency)
   if (form.scheduled_times.length !== expectedCount) {
     ElMessage.warning(`频率"${formatFrequency(form.frequency)}"需要${expectedCount}个时间点`)
@@ -266,8 +308,7 @@ async function handleSubmit() {
     resetForm()
   } catch (error: any) {
     console.error('操作失败:', error)
-    const errorMsg = error.response?.data?.detail || error.message || '操作失败，请检查网络连接'
-    ElMessage.error(errorMsg)
+    ElMessage.error(error.response?.data?.detail || error.message || '操作失败')
   }
 }
 
@@ -283,53 +324,19 @@ function handleEdit(row: any) {
   dialogVisible.value = true
 }
 
-async function handleCreate() {
-  if (!form.user_medication_id || !form.frequency || !form.dose || form.scheduled_times.length === 0) {
-    ElMessage.warning('请填写所有必填项')
-    return
-  }
-
-  // 验证时间数量与频率匹配
-  const expectedCount = getExpectedTimeCount(form.frequency)
-  if (form.scheduled_times.length !== expectedCount) {
-    ElMessage.warning(`频率"${formatFrequency(form.frequency)}"需要${expectedCount}个时间点`)
-    return
-  }
-
-  try {
-    await scheduleAPI.create({
-      user_medication_id: form.user_medication_id,
-      frequency: form.frequency,
-      scheduled_times: form.scheduled_times,
-      dose: form.dose,
-      start_date: dayjs(form.start_date).format('YYYY-MM-DD'),
-      end_date: form.end_date ? dayjs(form.end_date).format('YYYY-MM-DD') : null,
-      notes: form.notes || null
-    })
-    ElMessage.success('创建成功')
-    dialogVisible.value = false
-    await fetchSchedules()
-    resetForm()
-  } catch (error: any) {
-    console.error('创建用药提醒失败:', error)
-    const errorMsg = error.response?.data?.detail || error.message || '创建失败，请检查网络连接'
-    ElMessage.error(errorMsg)
-  }
-}
-
 async function handleDelete(id: number) {
-  await ElMessageBox.confirm('确定要删除这个提醒吗？', '提示', {
-    type: 'warning'
-  })
-
   try {
+    await ElMessageBox.confirm('确定要删除这个提醒吗？', '提示', {
+      type: 'warning',
+      confirmButtonText: '确定',
+      cancelButtonText: '取消'
+    })
+
     await scheduleAPI.delete(id)
     ElMessage.success('删除成功')
     await fetchSchedules()
-  } catch (error: any) {
-    console.error('删除失败:', error)
-    const errorMsg = error.response?.data?.detail || '删除失败'
-    ElMessage.error(errorMsg)
+  } catch (error) {
+    // Cancelled
   }
 }
 
@@ -345,7 +352,6 @@ function resetForm() {
 }
 
 function handleFrequencyChange(frequency: string) {
-  // 根据频率初始化时间数组
   const count = getExpectedTimeCount(frequency)
   form.scheduled_times = new Array(count).fill('')
 }
@@ -369,53 +375,214 @@ function formatFrequency(freq: string) {
   }
   return freqMap[freq] || freq
 }
+
+function getTimeStatus(timeStr: string): string {
+  const now = new Date()
+  const currentTime = now.getHours() * 60 + now.getMinutes()
+  const [hours, minutes] = timeStr.split(':').map(Number)
+  const scheduleTime = hours * 60 + minutes
+  
+  if (scheduleTime < currentTime) {
+    return 'info'
+  } else {
+    return 'primary'
+  }
+}
 </script>
 
 <style scoped>
-.schedule-view {
+.schedule-view-container {
   width: 100%;
-  height: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.schedule-list {
-  margin-top: 20px;
-}
-.schedule-list {
-  margin-top: 20px;
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
 }
 
-/* 显眼提醒横幅样式 */
+.header-left h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-text-main);
+  margin: 0 0 8px 0;
+}
+
+.subtitle {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Action Bar */
+.action-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 32px;
+}
+
+.add-btn {
+  box-shadow: var(--shadow-sm);
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* Reminder Banner */
 .reminder-banner {
-  background: #fffbe6; /* 温暖的提示色 */
-  border: 1px solid #ffe58f;
-  border-radius: 10px;
-  padding: 12px 16px;
-  margin-top: 10px;
-  margin-bottom: 10px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
+  border-radius: var(--radius-md);
+  padding: 16px 24px;
+  margin-bottom: 32px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid #FED7AA;
 }
 
-.reminder-content {
+.banner-content {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 16px;
 }
 
-.reminder-icon {
-  font-size: 22px;
+.banner-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-warning);
+  font-size: 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.swing-icon {
   animation: swing 1s ease-in-out infinite;
-  display: inline-block;
 }
 
-.reminder-text {
-  font-size: 14px;
-  color: #ad6800;
+.banner-text {
+  flex: 1;
+}
+
+.banner-title {
   font-weight: 600;
+  color: #9A3412;
+  margin-right: 12px;
 }
 
-.reminder-item {
-  margin-left: 8px;
-  color: #d48806;
+.banner-items {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.reminder-tag {
+  background-color: white;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 13px;
+  color: #C2410C;
+  font-weight: 500;
+}
+
+/* Schedule List */
+.schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.schedule-card {
+  border: none;
+  border-radius: var(--radius-md);
+  transition: transform 0.2s;
+}
+
+.schedule-card:hover {
+  transform: translateX(4px);
+}
+
+.schedule-card-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.schedule-info {
+  flex: 2;
+}
+
+.medicine-name-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.medicine-name-row h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-main);
+}
+
+.schedule-details {
+  display: flex;
+  gap: 24px;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.schedule-times {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.time-label {
+  font-size: 12px;
+  color: var(--color-text-light);
+}
+
+.time-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.schedule-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Time Picker Grid */
+.time-picker-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.time-picker-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.time-index {
+  font-size: 12px;
+  color: var(--color-text-secondary);
 }
 
 @keyframes swing {

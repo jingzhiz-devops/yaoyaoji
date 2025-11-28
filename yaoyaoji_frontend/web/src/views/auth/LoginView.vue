@@ -125,6 +125,7 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import { User, Lock, Message } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -250,7 +251,7 @@ async function handleRegister() {
   align-items: center;
   width: 100vw;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2A9D8F 0%, #264653 100%);
   overflow: hidden;
   padding: 20px;
 }
@@ -354,6 +355,7 @@ async function handleRegister() {
   animation: slideIn 0.6s ease-out;
   overflow: hidden;
   z-index: 1;
+  border: none;
 }
 
 @keyframes slideIn {
@@ -368,7 +370,7 @@ async function handleRegister() {
 }
 
 .login-card :deep(.el-card__header) {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  background: linear-gradient(135deg, rgba(42, 157, 143, 0.1) 0%, rgba(38, 70, 83, 0.1) 100%);
   border-bottom: none;
   padding: 30px 20px 20px;
 }
@@ -385,23 +387,23 @@ async function handleRegister() {
   width: 80px;
   height: 80px;
   margin: 0 auto;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2A9D8F 0%, #264653 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 8px 24px rgba(42, 157, 143, 0.4);
   animation: pulse 3s ease-in-out infinite;
 }
 
 @keyframes pulse {
   0%, 100% {
     transform: scale(1);
-    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 8px 24px rgba(42, 157, 143, 0.4);
   }
   50% {
     transform: scale(1.05);
-    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.6);
+    box-shadow: 0 8px 32px rgba(42, 157, 143, 0.6);
   }
 }
 
@@ -414,7 +416,7 @@ async function handleRegister() {
 
 .system-title {
   margin: 0 0 8px 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2A9D8F 0%, #264653 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -439,7 +441,7 @@ async function handleRegister() {
 }
 
 .login-tabs :deep(.el-tabs__active-bar) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #2A9D8F;
   height: 3px;
 }
 
@@ -450,7 +452,7 @@ async function handleRegister() {
 }
 
 .login-tabs :deep(.el-tabs__item.is-active) {
-  color: #667eea;
+  color: #2A9D8F;
   font-weight: 600;
 }
 
@@ -467,11 +469,11 @@ async function handleRegister() {
 }
 
 .auth-form :deep(.el-input__wrapper:hover) {
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+  box-shadow: 0 4px 12px rgba(42, 157, 143, 0.15);
 }
 
 .auth-form :deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.25);
+  box-shadow: 0 4px 16px rgba(42, 157, 143, 0.25);
 }
 
 /* 提交按钮 */
@@ -482,7 +484,7 @@ async function handleRegister() {
   font-size: 16px;
   font-weight: 600;
   letter-spacing: 1px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2A9D8F 0%, #264653 100%);
   border: none;
   transition: all 0.3s ease;
   margin-top: 10px;
@@ -490,7 +492,7 @@ async function handleRegister() {
 
 .submit-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 8px 24px rgba(42, 157, 143, 0.4);
 }
 
 .submit-btn:active {
@@ -499,11 +501,11 @@ async function handleRegister() {
 
 /* 成功按钮 */
 .el-button--success.submit-btn {
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  background: linear-gradient(135deg, #E76F51 0%, #F4A261 100%);
 }
 
 .el-button--success.submit-btn:hover {
-  box-shadow: 0 8px 24px rgba(67, 233, 123, 0.4);
+  box-shadow: 0 8px 24px rgba(231, 111, 81, 0.4);
 }
 
 /* 底部信息 */

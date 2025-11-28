@@ -1,92 +1,116 @@
 <template>
   <div class="user-profile-container">
-    <el-card class="profile-card">
-      <template #header>
-        <div class="card-header">
-          <h2>👤 用户信息</h2>
-        </div>
-      </template>
-
-      <!-- 账号基本信息 -->
-      <el-descriptions :column="2" border class="profile-info">
-        <el-descriptions-item label="用户名">
-          <strong>{{ userStore.user?.username }}</strong>
-        </el-descriptions-item>
-        <el-descriptions-item label="注册时间">
-          {{ formatDate(userStore.user?.created_at) }}
-        </el-descriptions-item>
-        <el-descriptions-item label="使用时长">
-          <el-tag type="success">{{ accountAge }}</el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="邮箱">
-          {{ userStore.user?.email || '未设置' }}
-        </el-descriptions-item>
-      </el-descriptions>
-
-      <el-divider />
-
-      <!-- 账号安全设置 -->
-      <div class="security-section">
-        <h3>🔐 账号安全</h3>
+    <div class="profile-content">
+      <el-row :gutter="24">
+        <el-col :span="8">
+          <!-- 个人信息卡片 -->
+          <el-card class="profile-card" shadow="hover">
+            <div class="profile-header">
+              <div class="avatar-wrapper">
+                <div class="avatar-circle">
+                  {{ userStore.user?.username?.charAt(0).toUpperCase() }}
+                </div>
+              </div>
+              <h3 class="username">{{ userStore.user?.username }}</h3>
+              <p class="email">{{ userStore.user?.email || '未设置邮箱' }}</p>
+              <el-tag class="role-tag" effect="dark" round>普通用户</el-tag>
+            </div>
+            
+            <div class="profile-stats">
+              <div class="stat-item">
+                <span class="stat-label">注册时间</span>
+                <span class="stat-value">{{ formatDate(userStore.user?.created_at) }}</span>
+              </div>
+              <div class="stat-divider"></div>
+              <div class="stat-item">
+                <span class="stat-label">使用时长</span>
+                <span class="stat-value">{{ accountAge }}</span>
+              </div>
+            </div>
+          </el-card>
+        </el-col>
         
-        <!-- 修改用户名 -->
-        <el-card class="action-card" shadow="hover">
-          <div class="action-content">
-            <div class="action-info">
-              <h4>修改用户名</h4>
-              <p>当前用户名：<strong>{{ userStore.user?.username }}</strong></p>
-              <p class="tip">支持中文、英文、数字和下划线，至少2个字符</p>
+        <el-col :span="16">
+          <!-- 安全设置 -->
+          <el-card class="security-card" shadow="hover">
+            <template #header>
+              <div class="card-header">
+                <el-icon><Lock /></el-icon>
+                <span>账号安全</span>
+              </div>
+            </template>
+            
+            <div class="security-list">
+              <div class="security-item">
+                <div class="item-icon">
+                  <el-icon><User /></el-icon>
+                </div>
+                <div class="item-content">
+                  <div class="item-title">修改用户名</div>
+                  <div class="item-desc">当前用户名：<strong>{{ userStore.user?.username }}</strong></div>
+                </div>
+                <el-button type="primary" plain @click="showChangeUsernameDialog">修改</el-button>
+              </div>
+              
+              <div class="security-item">
+                <div class="item-icon">
+                  <el-icon><Key /></el-icon>
+                </div>
+                <div class="item-content">
+                  <div class="item-title">登录密码</div>
+                  <div class="item-desc">定期修改密码可以提高账号安全性</div>
+                </div>
+                <el-button type="primary" plain @click="showChangePasswordDialog">修改</el-button>
+              </div>
             </div>
-            <el-button type="primary" @click="showChangeUsernameDialog">修改</el-button>
-          </div>
-        </el-card>
-
-        <!-- 修改密码 -->
-        <el-card class="action-card" shadow="hover">
-          <div class="action-content">
-            <div class="action-info">
-              <h4>修改密码</h4>
-              <p>定期修改密码可以提高账号安全性</p>
-              <p class="tip">密码至少6个字符</p>
-            </div>
-            <el-button type="primary" @click="showChangePasswordDialog">修改</el-button>
-          </div>
-        </el-card>
-      </div>
-    </el-card>
+          </el-card>
+        </el-col>
+      </el-row>
+    </div>
 
     <!-- 修改用户名对话框 -->
-    <el-dialog v-model="usernameDialogVisible" title="修改用户名" width="500px">
-      <el-form :model="usernameForm" :rules="usernameRules" ref="usernameFormRef" label-width="100px">
+    <el-dialog v-model="usernameDialogVisible" title="修改用户名" width="400px" class="custom-dialog">
+      <el-form :model="usernameForm" :rules="usernameRules" ref="usernameFormRef" label-position="top">
         <el-form-item label="新用户名" prop="newUsername">
-          <el-input v-model="usernameForm.newUsername" placeholder="请输入新用户名" />
+          <el-input v-model="usernameForm.newUsername" placeholder="请输入新用户名" size="large">
+            <template #prefix><el-icon><User /></el-icon></template>
+          </el-input>
+          <div class="form-tip">支持中文、英文、数字和下划线，至少2个字符</div>
         </el-form-item>
         <el-form-item label="确认密码" prop="password">
-          <el-input v-model="usernameForm.password" type="password" placeholder="请输入当前密码确认" />
+          <el-input v-model="usernameForm.password" type="password" placeholder="请输入当前密码确认" size="large" show-password>
+            <template #prefix><el-icon><Lock /></el-icon></template>
+          </el-input>
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="usernameDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleChangeUsername" :loading="submitting">确定</el-button>
+        <el-button type="primary" @click="handleChangeUsername" :loading="submitting">确定修改</el-button>
       </template>
     </el-dialog>
 
     <!-- 修改密码对话框 -->
-    <el-dialog v-model="passwordDialogVisible" title="修改密码" width="500px">
-      <el-form :model="passwordForm" :rules="passwordRules" ref="passwordFormRef" label-width="100px">
+    <el-dialog v-model="passwordDialogVisible" title="修改密码" width="400px" class="custom-dialog">
+      <el-form :model="passwordForm" :rules="passwordRules" ref="passwordFormRef" label-position="top">
         <el-form-item label="原密码" prop="oldPassword">
-          <el-input v-model="passwordForm.oldPassword" type="password" placeholder="请输入原密码" />
+          <el-input v-model="passwordForm.oldPassword" type="password" placeholder="请输入原密码" size="large" show-password>
+            <template #prefix><el-icon><Key /></el-icon></template>
+          </el-input>
         </el-form-item>
         <el-form-item label="新密码" prop="newPassword">
-          <el-input v-model="passwordForm.newPassword" type="password" placeholder="请输入新密码（至少6位）" />
+          <el-input v-model="passwordForm.newPassword" type="password" placeholder="请输入新密码（至少6位）" size="large" show-password>
+            <template #prefix><el-icon><Lock /></el-icon></template>
+          </el-input>
         </el-form-item>
         <el-form-item label="确认密码" prop="confirmPassword">
-          <el-input v-model="passwordForm.confirmPassword" type="password" placeholder="请再次输入新密码" />
+          <el-input v-model="passwordForm.confirmPassword" type="password" placeholder="请再次输入新密码" size="large" show-password>
+            <template #prefix><el-icon><Check /></el-icon></template>
+          </el-input>
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="passwordDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleChangePassword" :loading="submitting">确定</el-button>
+        <el-button type="primary" @click="handleChangePassword" :loading="submitting">确定修改</el-button>
       </template>
     </el-dialog>
   </div>
@@ -98,6 +122,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import { authAPI } from '@/api'
+import { User, Lock, Key, Check } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -166,9 +191,7 @@ function formatDate(dateStr: string | undefined) {
   return date.toLocaleDateString('zh-CN', {
     year: 'numeric',
     month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
+    day: '2-digit'
   })
 }
 
@@ -268,69 +291,173 @@ onMounted(async () => {
 
 <style scoped>
 .user-profile-container {
-  max-width: 900px;
+  width: 100%;
+  max-width: 1000px;
   margin: 0 auto;
-  padding: 20px;
 }
 
-.profile-card {
-  border-radius: 8px;
+.page-header {
+  margin-bottom: 32px;
 }
 
-.card-header h2 {
-  margin: 0;
-  color: #303133;
-}
-
-.profile-info {
-  margin-bottom: 20px;
-}
-
-.profile-info :deep(.el-descriptions__label) {
-  font-weight: 500;
-  color: #606266;
-}
-
-.security-section {
-  margin-top: 20px;
-}
-
-.security-section h3 {
-  margin: 0 0 20px 0;
-  color: #303133;
-  font-size: 18px;
-}
-
-.action-card {
-  margin-bottom: 15px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.action-card:hover {
-  transform: translateY(-2px);
-}
-
-.action-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.action-info h4 {
+.header-left h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-text-main);
   margin: 0 0 8px 0;
-  color: #303133;
-  font-size: 16px;
 }
 
-.action-info p {
-  margin: 5px 0;
-  color: #606266;
+.subtitle {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Profile Card */
+.profile-card {
+  border: none;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.profile-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.avatar-wrapper {
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.avatar-circle {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+  color: white;
+  font-size: 40px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(42, 157, 143, 0.3);
+}
+
+.username {
+  margin: 0 0 4px 0;
+  font-size: 24px;
+  color: var(--color-text-main);
+}
+
+.email {
+  margin: 0 0 12px 0;
+  color: var(--color-text-secondary);
   font-size: 14px;
 }
 
-.action-info .tip {
+.profile-stats {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-label {
   font-size: 12px;
-  color: #909399;
+  color: var(--color-text-light);
+}
+
+.stat-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-main);
+}
+
+.stat-divider {
+  width: 1px;
+  height: 30px;
+  background: var(--color-border);
+}
+
+/* Security Card */
+.security-card {
+  border: none;
+  height: 100%;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-main);
+}
+
+.security-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.security-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: #f9fafb;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  transition: all 0.3s;
+}
+
+.security-item:hover {
+  background: white;
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-2px);
+}
+
+.item-icon {
+  width: 48px;
+  height: 48px;
+  background: white;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.item-content {
+  flex: 1;
+}
+
+.item-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-main);
+  margin-bottom: 4px;
+}
+
+.item-desc {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.form-tip {
+  font-size: 12px;
+  color: var(--color-text-light);
+  margin-top: 4px;
 }
 </style>
