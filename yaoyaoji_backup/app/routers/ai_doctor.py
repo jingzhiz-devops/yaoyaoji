@@ -11,6 +11,9 @@ from ..config import settings
 
 router = APIRouter(prefix="/api/ai", tags=["AI医生"])
 
+# DeepSeek API配置
+DEEPSEEK_API_KEY = "sk-xxxx"
+DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 
 class SymptomRequest(BaseModel):
     """症状描述请求"""
