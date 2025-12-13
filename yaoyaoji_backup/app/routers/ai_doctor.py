@@ -3,17 +3,15 @@ from pydantic import BaseModel
 from typing import Optional
 try:
     from openai import OpenAI
+    import httpx
 except ImportError:
     OpenAI = None
+    httpx = None
 import os
 from datetime import datetime
 from ..config import settings
 
 router = APIRouter(prefix="/api/ai", tags=["AI医生"])
-
-# DeepSeek API配置
-DEEPSEEK_API_KEY = "sk-xxxx"
-DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 
 class SymptomRequest(BaseModel):
     """症状描述请求"""
@@ -52,11 +50,20 @@ async def ai_medical_predict(request: SymptomRequest):
     print(f"📝 收到症状描述: {symptom_text}")
     
     try:
-        # 初始化DeepSeek客户端
+        # 初始化DeepSeek客户端（使用自定义httpx客户端以提高稳定性）
+        http_client = httpx.Client(
+            timeout=60.0,  # 60秒超时
+            limits=httpx.Limits(
+                max_keepalive_connections=5,
+                max_connections=10,
+                keepalive_expiry=30.0
+            )
+        )
+        
         client = OpenAI(
             api_key=settings.DEEPSEEK_API_KEY,
             base_url=settings.DEEPSEEK_BASE_URL,
-            timeout=30.0  # 设置30秒超时
+            http_client=http_client
         )
         
         # 构建专业的医疗问诊提示词
@@ -95,6 +102,9 @@ async def ai_medical_predict(request: SymptomRequest):
         ai_suggestion = response.choices[0].message.content or "未获取到AI回复"
         print(f"✅ AI回复成功，长度: {len(ai_suggestion)}")
         
+        # 关闭HTTP客户端
+        http_client.close()
+        
         # 返回结果
         return AIResponse(
             suggestion=ai_suggestion,
@@ -102,8 +112,16 @@ async def ai_medical_predict(request: SymptomRequest):
         )
         
     except Exception as e:
+        error_type = type(e).__name__
         error_msg = str(e)
-        print(f"❌ DeepSeek API调用失败: {error_msg}")
+        print(f"❌ DeepSeek API调用失败: {error_type}: {error_msg}")
+        
+        # 如果是网络连接错误，提供更详细的错误信息
+        if "Connection" in error_type or "connection" in error_msg.lower():
+            print("⚠️ 网络连接错误，可能的原因：")
+            print("   1. 网络不稳定或无法访问DeepSeek API")
+            print("   2. 需要配置代理")
+            print("   3. 防火墙阻止了连接")
         
         # 如果API调用失败，返回智能模拟建议
         print("⚠️ 使用备用模拟AI建议")
@@ -231,10 +249,20 @@ async def ai_query_medicine(request: MedicineQueryRequest):
         )
         
     except Exception as e:
-        print(f"❌ 药品查询失败: {str(e)}")
+        error_type = type(e).__name__
+        error_msg = str(e)
+        print(f"❌ 药品查询失败: {error_type}: {error_msg}")
+        
+        # 如果是网络连接错误，提供更详细的错误信息
+        if "Connection" in error_type or "connection" in error_msg.lower():
+            print("⚠️ 网络连接错误，可能的原因：")
+            print("   1. 网络不稳定或无法访问DeepSeek API")
+            print("   2. 需要配置代理")
+            print("   3. 防火墙阻止了连接")
+        
         # 返回简化的回复
         return AIResponse(
-            suggestion=f"抱歉，暂时无法查询药品『{medicine_name}』的详细信息。请稍后重试或咨询医师、药师。",
+            suggestion=f"抱歉，暂时无法查询药品『{medicine_name}』的详细信息。\n\n原因：{error_type}\n建议：请检查网络连接或稍后重试，也可咨询医师、药师。",
             timestamp=datetime.now().isoformat()
         )
 
@@ -302,8 +330,18 @@ async def ai_query_disease(request: DiseaseQueryRequest):
         )
         
     except Exception as e:
-        print(f"❌ 疾病查询失败: {str(e)}")
+        error_type = type(e).__name__
+        error_msg = str(e)
+        print(f"❌ 疾病查询失败: {error_type}: {error_msg}")
+        
+        # 如果是网络连接错误，提供更详细的错误信息
+        if "Connection" in error_type or "connection" in error_msg.lower():
+            print("⚠️ 网络连接错误，可能的原因：")
+            print("   1. 网络不稳定或无法访问DeepSeek API")
+            print("   2. 需要配置代理")
+            print("   3. 防火墙阻止了连接")
+        
         return AIResponse(
-            suggestion=f"抱歉，暂时无法查询疾病『{disease_name}』的详细信息。请稍后重试或咨询专业医师。",
+            suggestion=f"抱歉，暂时无法查询疾病『{disease_name}』的详细信息。\n\n原因：{error_type}\n建议：请检查网络连接或稍后重试，也可咨询专业医师。",
             timestamp=datetime.now().isoformat()
         )
