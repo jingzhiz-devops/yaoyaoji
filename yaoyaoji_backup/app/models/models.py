@@ -1,7 +1,7 @@
 """  
 数据库模型定义
 """
-from sqlalchemy import Column, Integer, String, Text, DateTime, Enum, Date, Time, ForeignKey, JSON, Boolean
+from sqlalchemy import Column, Integer, String, Text, DateTime, Enum, Date, Time, ForeignKey, JSON, Boolean, Float
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database import Base
@@ -95,6 +95,9 @@ class MedicationSchedule(Base):
     frequency = Column(Enum(FrequencyType), nullable=False)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=True)
+    purchase_date = Column(Date, nullable=True)  # 药品购入日期
+    therapy_duration = Column(Integer, nullable=True)  # 吃药疗程（天数）
+    remind_advance_days = Column(Integer, default=5)  # 提前提醒备药天数，默认5天
     
     # 关系
     user_medication = relationship("UserMedication", back_populates="schedules")
@@ -222,6 +225,7 @@ class HealthProfile(Base):
     
     # 基本信息
     real_name = Column(String(50), nullable=True)  # 真实姓名
+    birth_date = Column(Date, nullable=True)  # 出生日期
     blood_type = Column(String(10), nullable=True)  # 血型
     height = Column(Integer, nullable=True)  # 身高(cm)
     weight = Column(Integer, nullable=True)  # 体重(kg)
@@ -375,3 +379,200 @@ class KnowledgeBase(Base):
     helpful_count = Column(Integer, default=0)  # 有帮助评价数
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+# ============= 慢性病管理模块 =============
+
+class ControlStatus(str, enum.Enum):
+    """慢性病控制状态枚举"""
+    GOOD = "good"      # 控制良好
+    FAIR = "fair"      # 控制中等
+    POOR = "poor"      # 控制不良
+
+
+class ChronicDisease(Base):
+    """慢性病表"""
+    __tablename__ = "chronic_diseases"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    # 基本信息
+    disease_name = Column(String(100), nullable=False)  # 疾病名称
+    icd10_code = Column(String(20), nullable=True)  # ICD-10编码
+    diagnosis_date = Column(Date, nullable=True)  # 诊断日期
+    diagnosis_hospital = Column(String(200), nullable=True)  # 诊断医院
+    diagnosis_doctor = Column(String(50), nullable=True)  # 诊断医生
+    
+    # 治疗信息
+    current_treatment = Column(Text, nullable=True)  # 当前治疗方案
+    control_status = Column(Enum(ControlStatus), default=ControlStatus.FAIR)  # 控制状态
+    
+    # 时间戳
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    
+    # 关系
+    user = relationship("User", foreign_keys=[user_id])
+    indicators = relationship("DiseaseIndicator", back_populates="disease")
+    indicator_records = relationship("IndicatorRecord", back_populates="disease")
+    followup_plans = relationship("FollowupPlan", back_populates="disease")
+
+
+class DiseaseIndicator(Base):
+    """疾病关键指标表"""
+    __tablename__ = "disease_indicators"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    disease_id = Column(Integer, ForeignKey("chronic_diseases.id"), nullable=False)
+    
+    indicator_name = Column(String(100), nullable=False)  # 指标名称（如"收缩压"）
+    normal_range_min = Column(Float, nullable=True)  # 正常范围最小值
+    normal_range_max = Column(Float, nullable=True)  # 正常范围最大值
+    unit = Column(String(50), nullable=True)  # 单位（如 mmHg）
+    check_frequency = Column(String(50), nullable=True)  # 检查频率（daily/weekly/monthly）
+    
+    created_at = Column(DateTime, default=datetime.now)
+    
+    # 关系
+    disease = relationship("ChronicDisease", back_populates="indicators")
+    records = relationship("IndicatorRecord", back_populates="indicator")
+
+
+class IndicatorRecord(Base):
+    """指标记录表（用户填写的具体数据）"""
+    __tablename__ = "indicator_records"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    disease_id = Column(Integer, ForeignKey("chronic_diseases.id"), nullable=False)
+    indicator_id = Column(Integer, ForeignKey("disease_indicators.id"), nullable=False)
+    
+    value = Column(Float, nullable=False)  # 记录的数值
+    measurement_date = Column(DateTime, nullable=False)  # 测量日期时间
+    recorded_by = Column(String(50), nullable=True)  # 记录者（self/caregiver等）
+    notes = Column(Text, nullable=True)  # 备注
+    
+    created_at = Column(DateTime, default=datetime.now)
+    
+    # 关系
+    disease = relationship("ChronicDisease", back_populates="indicator_records")
+    indicator = relationship("DiseaseIndicator", back_populates="records")
+
+
+class FollowupPlan(Base):
+    """随访计划表"""
+    __tablename__ = "followup_plans"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    disease_id = Column(Integer, ForeignKey("chronic_diseases.id"), nullable=False)
+    
+    frequency = Column(String(50), nullable=False)  # 频率：weekly/monthly/quarterly/yearly
+    last_followup_date = Column(Date, nullable=True)  # 最后随访日期
+    next_followup_date = Column(Date, nullable=False)  # 下次随访日期
+    responsible_doctor = Column(String(100), nullable=True)  # 负责医生
+    
+    # 随访内容清单（JSON格式）
+    followup_checklist = Column(JSON, nullable=True)  # [{"item": "症状评估", "done": false}]
+    
+    # 目标值（JSON格式）
+    target_values = Column(JSON, nullable=True)  # {"血压": "<140/90", "血糖": "<7.0"}
+    
+    reminder_days = Column(Integer, default=7)  # 提前几天提醒
+    
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    
+    # 关系
+    disease = relationship("ChronicDisease", back_populates="followup_plans")
+    records = relationship("FollowupRecord", back_populates="plan")
+
+
+class FollowupRecord(Base):
+    """随访记录表（具体的随访执行记录）"""
+    __tablename__ = "followup_records"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    followup_plan_id = Column(Integer, ForeignKey("followup_plans.id"), nullable=False)
+    
+    followup_date = Column(DateTime, nullable=False)  # 随访日期
+    symptoms_assessment = Column(Text, nullable=True)  # 症状评估
+    indicator_check = Column(JSON, nullable=True)  # 指标检查结果
+    medication_evaluation = Column(Text, nullable=True)  # 用药评价
+    lifestyle_guidance = Column(Text, nullable=True)  # 生活方式指导
+    doctor_notes = Column(Text, nullable=True)  # 医生备注
+    next_plan = Column(Text, nullable=True)  # 下一步计划
+    
+    created_at = Column(DateTime, default=datetime.now)
+    
+    # 关系
+    plan = relationship("FollowupPlan", back_populates="records")
+
+
+class AlertLevel(str, enum.Enum):
+    """预警级别枚举"""
+    YELLOW = "yellow"  # 黄色预警：轻微异常
+    ORANGE = "orange"  # 橙色预警：中度异常
+    RED = "red"        # 红色预警：严重异常
+
+
+class IndicatorAlert(Base):
+    """指标异常预警表"""
+    __tablename__ = "indicator_alerts"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    disease_id = Column(Integer, ForeignKey("chronic_diseases.id"), nullable=False)
+    indicator_id = Column(Integer, ForeignKey("disease_indicators.id"), nullable=False)
+    record_id = Column(Integer, ForeignKey("indicator_records.id"), nullable=False)
+    
+    alert_level = Column(Enum(AlertLevel), nullable=False)  # 预警级别
+    alert_message = Column(Text, nullable=False)  # 预警信息
+    indicator_value = Column(Float, nullable=False)  # 触发预警的数值
+    normal_range = Column(String(50), nullable=True)  # 正常范围描述
+    suggestion = Column(Text, nullable=True)  # 建议措施
+    
+    is_read = Column(Boolean, default=False)  # 是否已读
+    is_handled = Column(Boolean, default=False)  # 是否已处理
+    handled_at = Column(DateTime, nullable=True)  # 处理时间
+    handler_notes = Column(Text, nullable=True)  # 处理备注
+    
+    created_at = Column(DateTime, default=datetime.now)
+    
+    # 关系
+    user = relationship("User", foreign_keys=[user_id])
+    disease = relationship("ChronicDisease", foreign_keys=[disease_id])
+    indicator = relationship("DiseaseIndicator", foreign_keys=[indicator_id])
+    record = relationship("IndicatorRecord", foreign_keys=[record_id])
+
+
+class MedicationAdherence(Base):
+    """用药依从性追踪表"""
+    __tablename__ = "medication_adherence"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    disease_id = Column(Integer, ForeignKey("chronic_diseases.id"), nullable=False)
+    user_medication_id = Column(Integer, ForeignKey("user_medications.id"), nullable=False)
+    
+    # 统计周期（如2024-01-01到2024-01-07）
+    period_start = Column(Date, nullable=False)
+    period_end = Column(Date, nullable=False)
+    
+    # 依从性统计
+    total_doses = Column(Integer, default=0)  # 应服药次数
+    taken_doses = Column(Integer, default=0)  # 实际服药次数
+    skipped_doses = Column(Integer, default=0)  # 漏服次数
+    delayed_doses = Column(Integer, default=0)  # 延迟服药次数
+    adherence_rate = Column(Float, default=0.0)  # 依从率（0-100）
+    
+    # 关联的病情控制状态
+    control_status_before = Column(Enum(ControlStatus), nullable=True)  # 周期开始时的控制状态
+    control_status_after = Column(Enum(ControlStatus), nullable=True)  # 周期结束时的控制状态
+    
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    
+    # 关系
+    user = relationship("User", foreign_keys=[user_id])
+    disease = relationship("ChronicDisease", foreign_keys=[disease_id])
+    user_medication = relationship("UserMedication", foreign_keys=[user_medication_id])

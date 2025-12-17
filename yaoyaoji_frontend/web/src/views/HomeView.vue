@@ -39,6 +39,10 @@
             <el-icon><User /></el-icon>
             <span>健康档案</span>
           </el-menu-item>
+          <el-menu-item index="/chronic-disease">
+            <el-icon><CircleCheck /></el-icon>
+            <span>慢性病管理</span>
+          </el-menu-item>
           <el-menu-item index="/family">
             <el-icon><UserFilled /></el-icon>
             <span>家庭管理</span>
@@ -92,7 +96,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { 
   House, Box, Clock, Document, ChatDotRound, User, UserFilled, 
-  SwitchButton, FirstAidKit, Setting
+  SwitchButton, FirstAidKit, Setting, CircleCheck
 } from '@element-plus/icons-vue'
 
 const route = useRoute()

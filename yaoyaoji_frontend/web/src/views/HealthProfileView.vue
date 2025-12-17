@@ -22,6 +22,19 @@
                   </el-form-item>
                 </el-col>
                 <el-col :span="8">
+                  <el-form-item label="出生日期">
+                    <el-date-picker v-model="basicInfo.birth_date" type="date" placeholder="选择日期" style="width: 100%" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                  <el-form-item label="年龄">
+                    <el-input :value="age" disabled />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+
+              <el-row :gutter="24">
+                <el-col :span="8">
                   <el-form-item label="血型">
                     <el-select v-model="basicInfo.blood_type" placeholder="请选择血型" clearable style="width: 100%">
                       <el-option label="A型" value="A" />
@@ -41,9 +54,6 @@
                     </el-input>
                   </el-form-item>
                 </el-col>
-              </el-row>
-
-              <el-row :gutter="24">
                 <el-col :span="8">
                   <el-form-item label="身高 (cm)">
                     <el-input-number v-model="basicInfo.height" :min="0" :max="300" style="width: 100%;" />
@@ -435,6 +445,7 @@ const saving = ref(false)
 // 基本信息
 const basicInfo = ref({
   real_name: null as string | null,
+  birth_date: null as string | null,
   blood_type: null as string | null,
   height: null as number | null,
   weight: null as number | null,
@@ -444,6 +455,21 @@ const basicInfo = ref({
   blood_glucose: null as string | null,
   temperature: null as string | null,
   chronic_diseases: null as string | null
+})
+
+// 计算年龄
+const age = computed(() => {
+  if (basicInfo.value.birth_date) {
+    const birthDate = new Date(basicInfo.value.birth_date)
+    const today = new Date()
+    let calculatedAge = today.getFullYear() - birthDate.getFullYear()
+    const monthDiff = today.getMonth() - birthDate.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      calculatedAge--
+    }
+    return calculatedAge
+  }
+  return '-'
 })
 
 // 计算BMI
@@ -553,6 +579,7 @@ async function loadData() {
     if (profile) {
       basicInfo.value = {
         real_name: profile.real_name,
+        birth_date: profile.birth_date,
         blood_type: profile.blood_type,
         height: profile.height,
         weight: profile.weight,
@@ -580,7 +607,13 @@ async function saveBasicInfo() {
   if (saving.value) return
   saving.value = true
   try {
-    await healthProfileAPI.createOrUpdate(basicInfo.value)
+    const submitData = { ...basicInfo.value }
+    // 转换日期格式
+    if (submitData.birth_date && submitData.birth_date instanceof Date) {
+      const d = submitData.birth_date
+      submitData.birth_date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` as any
+    }
+    await healthProfileAPI.createOrUpdate(submitData)
     ElMessage.success('保存成功')
   } catch (error: any) {
     ElMessage.error(error.response?.data?.detail || '保存失败')

@@ -3,7 +3,7 @@
     <div class="welcome-section">
       <div class="welcome-text">
         <h1 class="welcome-title">
-          早安，{{ username }}
+          {{ greeting }}，{{ username }}
         </h1>
         <p class="welcome-subtitle">祝您今天身体健康，心情愉快</p>
       </div>
@@ -182,9 +182,19 @@
                 <span class="unit">mmol/L</span>
               </div>
               <div class="mini-metric">
-                <span class="label">体温</span>
-                <span class="value">{{ healthProfile.temperature || '-' }}</span>
-                <span class="unit">℃</span>
+                <span class="label">年龄</span>
+                <span class="value">{{ age }}</span>
+                <span class="unit">岁</span>
+              </div>
+              <div class="mini-metric">
+                <span class="label">体重</span>
+                <span class="value">{{ healthProfile.weight || '-' }}</span>
+                <span class="unit">kg</span>
+              </div>
+              <div class="mini-metric">
+                <span class="label">血型</span>
+                <span class="value">{{ healthProfile.blood_type || '-' }}</span>
+                <span class="unit"></span>
               </div>
             </div>
 
@@ -200,6 +210,38 @@
                   round
                 >
                   {{ disease.trim() }}
+                </el-tag>
+              </div>
+            </div>
+
+            <div class="tags-section" v-if="allergies.length > 0">
+              <span class="section-label">过敏史</span>
+              <div class="tags-wrapper">
+                <el-tag 
+                  v-for="allergy in allergies"
+                  :key="allergy.id"
+                  size="small"
+                  type="danger"
+                  effect="light"
+                  round
+                >
+                  {{ allergy.allergen }}{{ allergy.reaction ? `(${allergy.reaction})` : '' }}
+                </el-tag>
+              </div>
+            </div>
+
+            <div class="tags-section" v-if="familyHistories.length > 0">
+              <span class="section-label">遗传病史</span>
+              <div class="tags-wrapper">
+                <el-tag 
+                  v-for="history in familyHistories"
+                  :key="history.id"
+                  size="small"
+                  type="info"
+                  effect="light"
+                  round
+                >
+                  {{ history.relative }}: {{ history.disease }}
                 </el-tag>
               </div>
             </div>
@@ -271,12 +313,41 @@ const checkups = ref<any[]>([])
 
 const username = computed(() => userStore.user?.username || '用户')
 
+// 根据时间显示不同的问候语
+const greeting = computed(() => {
+  const hour = new Date().getHours()
+  if (hour >= 5 && hour < 12) {
+    return '上午好'
+  } else if (hour >= 12 && hour < 18) {
+    return '中午好'
+  } else if (hour >= 18 && hour < 22) {
+    return '晚上好'
+  } else {
+    return '夜深了'
+  }
+})
+
 // 计算BMI
 const bmi = computed(() => {
   if (healthProfile.value?.height && healthProfile.value?.weight) {
     const h = healthProfile.value.height / 100
     const bmiValue = healthProfile.value.weight / (h * h)
     return bmiValue.toFixed(1)
+  }
+  return '-'
+})
+
+// 计算年龄
+const age = computed(() => {
+  if (healthProfile.value?.birth_date) {
+    const birthDate = new Date(healthProfile.value.birth_date)
+    const today = new Date()
+    let calculatedAge = today.getFullYear() - birthDate.getFullYear()
+    const monthDiff = today.getMonth() - birthDate.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      calculatedAge--
+    }
+    return calculatedAge
   }
   return '-'
 })
@@ -782,6 +853,7 @@ async function handleSwitchToMember(member: any) {
 .metric-item .label {
   font-size: 14px;
   color: var(--color-text-secondary);
+  font-weight: 600;
 }
 
 .metric-item .value-row {
@@ -800,6 +872,7 @@ async function handleSwitchToMember(member: any) {
   padding: 2px 8px;
   border-radius: 10px;
   background-color: var(--color-bg-page);
+  font-weight: 600;
 }
 
 .value.normal, .status-badge.normal { color: var(--color-success); }
@@ -809,7 +882,7 @@ async function handleSwitchToMember(member: any) {
 
 .metric-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 16px;
 }
 
@@ -840,20 +913,27 @@ async function handleSwitchToMember(member: any) {
 }
 
 .tags-section {
-  margin-top: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
 }
 
 .section-label {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text-secondary);
   display: block;
   margin-bottom: 8px;
+  font-weight: 600;
 }
 
 .tags-wrapper {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+:deep(.tags-section .el-tag) {
+  font-weight: 600;
 }
 
 /* Recent List */
