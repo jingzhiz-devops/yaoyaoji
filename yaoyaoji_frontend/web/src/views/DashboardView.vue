@@ -5,10 +5,17 @@
         <h1 class="welcome-title">
           {{ greeting }}，{{ username }}
         </h1>
-        <p class="welcome-subtitle">祝您今天身体健康，心情愉快</p>
+        <p class="welcome-subtitle">祝您身体健康，爱自己，笑口常开！</p>
       </div>
-      <div class="welcome-decoration">
-        <!-- Abstract decoration or illustration placeholder -->
+      <div class="calendar-widget">
+        <div class="calendar-date">
+          <div class="calendar-day">{{ currentDay }}</div>
+          <div class="calendar-month-year">{{ currentMonthYear }}</div>
+        </div>
+        <div class="calendar-lunar">
+          <div class="lunar-date">{{ lunarDateStr }}</div>
+          <div class="lunar-festival" v-if="lunarFestival">{{ lunarFestival }}</div>
+        </div>
       </div>
     </div>
 
@@ -296,6 +303,7 @@ import {
   Box, AlarmClock, Calendar, Notebook, Timer, UserFilled, 
   DataLine, Files, DocumentChecked, KnifeFork 
 } from '@element-plus/icons-vue'
+import { Lunar, Solar } from 'lunar-javascript'
 
 const medicationStore = useMedicationStore()
 const userStore = useUserStore()
@@ -310,6 +318,33 @@ const allergies = ref<any[]>([])
 const familyHistories = ref<any[]>([])
 const surgeries = ref<any[]>([])
 const checkups = ref<any[]>([])
+
+// 日历数据
+const now = new Date()
+const solar = Solar.fromDate(now)
+const lunar = solar.getLunar()
+
+const currentDay = computed(() => now.getDate())
+const currentMonthYear = computed(() => {
+  const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
+  return `${now.getFullYear()}年${months[now.getMonth()]}`
+})
+
+const lunarDateStr = computed(() => {
+  return `${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}`
+})
+
+const lunarFestival = computed(() => {
+  const festivals = lunar.getFestivals()
+  const jieQi = lunar.getJieQi()
+  if (festivals.length > 0) {
+    return festivals[0]
+  }
+  if (jieQi) {
+    return jieQi
+  }
+  return ''
+})
 
 const username = computed(() => userStore.user?.username || '用户')
 
@@ -573,11 +608,15 @@ async function handleSwitchToMember(member: any) {
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .welcome-text {
   position: relative;
   z-index: 2;
+  flex: 1;
 }
 
 .welcome-title {
@@ -589,6 +628,55 @@ async function handleSwitchToMember(member: any) {
 .welcome-subtitle {
   font-size: 16px;
   opacity: 0.9;
+}
+
+/* Calendar Widget */
+.calendar-widget {
+  position: relative;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-md);
+  padding: 20px 24px;
+  min-width: 180px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.calendar-date {
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+}
+
+.calendar-day {
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.calendar-month-year {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.calendar-lunar {
+  text-align: center;
+}
+
+.lunar-date {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.lunar-festival {
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 8px;
+  border-radius: 10px;
+  display: inline-block;
 }
 
 /* Stats Grid */
@@ -712,21 +800,25 @@ async function handleSwitchToMember(member: any) {
 
 /* Schedule List */
 .schedule-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 16px;
 }
 
 .schedule-item {
   display: flex;
-  gap: 16px;
+  gap: 12px;
+  background-color: var(--color-bg-page);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
 }
 
 .schedule-time-line {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 20px;
+  width: 12px;
+  flex-shrink: 0;
 }
 
 .time-dot {
@@ -738,27 +830,21 @@ async function handleSwitchToMember(member: any) {
 }
 
 .time-line {
-  flex: 1;
-  width: 2px;
-  background-color: var(--color-border);
-  margin-top: 4px;
-}
-
-.schedule-item:last-child .time-line {
   display: none;
 }
 
 .schedule-content {
   flex: 1;
-  background-color: var(--color-bg-page);
-  border-radius: var(--radius-sm);
-  padding: 12px 16px;
+  min-width: 0;
 }
 
 .medicine-info h4 {
   margin: 0 0 4px 0;
   font-size: 15px;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .medicine-info p {
@@ -769,7 +855,7 @@ async function handleSwitchToMember(member: any) {
 
 .time-tags {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 

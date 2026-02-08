@@ -1,0 +1,44 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.env
+.venv
+env/
+venv/
+ENV/
+.eggs/
+*.egg-info/
+*.egg
+
+# 测试和文档
+tests/
+docs/
+*.md
+
+# 本地配置
+*.local
+.env.local
+
+# 日志
+*.log
+logs/
+
+# 上传的文件（生产环境通过卷挂载）
+uploads/
+
+# 临时文件
+tmp/
+temp/

@@ -55,7 +55,7 @@
             </div>
 
             <div class="plan-actions">
-              <el-button size="small" @click="editPlan(plan)">编辑</el-button>
+              <el-button size="small" @click="editFollowupPlan(plan)">编辑</el-button>
               <el-button size="small" type="primary" @click="recordFollowup(plan)">
                 记录随访
               </el-button>
@@ -401,11 +401,6 @@ const deleteFollowupPlan = (plan: FollowupPlan) => {
 const formatDate = (date: string): string => {
   if (!date) return '-'
   return new Date(date).toLocaleDateString('zh-CN')
-}
-
-// 处理下拉菜单命令
-const editPlan = (plan: FollowupPlan) => {
-  editFollowupPlan(plan)
 }
 
 const deletePlan = (plan: FollowupPlan) => {
