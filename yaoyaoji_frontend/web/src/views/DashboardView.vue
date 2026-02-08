@@ -17,6 +17,35 @@
           <div class="lunar-festival" v-if="lunarFestival">{{ lunarFestival }}</div>
         </div>
       </div>
+      <div class="user-widget">
+        <div class="user-avatar-wrapper" @click="$router.push('/user-profile')">
+          <img v-if="userStore.user?.avatar" :src="getUserAvatarUrl(userStore.user.avatar)" class="user-avatar-img" />
+          <div v-else class="user-avatar-placeholder">
+            {{ userStore.user?.username?.charAt(0).toUpperCase() }}
+          </div>
+        </div>
+        <div class="user-info-text" @click="$router.push('/user-profile')">
+          <span class="user-name">{{ userStore.user?.username }}</span>
+        </div>
+        <el-dropdown @command="handleUserCommand" trigger="click">
+          <span class="user-role-dropdown">
+            <span class="user-role">家庭管理员</span>
+            <el-icon class="user-arrow"><ArrowDown /></el-icon>
+          </span>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="profile">
+                <el-icon><User /></el-icon>
+                个人设置
+              </el-dropdown-item>
+              <el-dropdown-item command="logout" divided>
+                <el-icon><SwitchButton /></el-icon>
+                退出登录
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </div>
     </div>
 
     <!-- 核心指标卡片 -->
@@ -295,18 +324,20 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useMedicationStore } from '@/stores/medication'
 import { useUserStore } from '@/stores/user'
 import { scheduleAPI, symptomAPI, recordAPI, healthProfileAPI, familyAPI } from '@/api'
 import { 
   Box, AlarmClock, Calendar, Notebook, Timer, UserFilled, 
-  DataLine, Files, DocumentChecked, KnifeFork 
+  DataLine, Files, DocumentChecked, KnifeFork, ArrowDown, User, SwitchButton 
 } from '@element-plus/icons-vue'
 import { Lunar, Solar } from 'lunar-javascript'
 
 const medicationStore = useMedicationStore()
 const userStore = useUserStore()
+const router = useRouter()
 const todaySchedules = ref<any[]>([])
 const symptomCount = ref(0)
 const medicationScheduleDays = ref<Array<{ id: number; name: string; days: number }>>([])
@@ -347,6 +378,24 @@ const lunarFestival = computed(() => {
 })
 
 const username = computed(() => userStore.user?.username || '用户')
+
+// 获取用户头像完整URL
+function getUserAvatarUrl(avatarPath: string) {
+  if (!avatarPath) return ''
+  if (avatarPath.startsWith('http')) return avatarPath
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+  return `${baseUrl}${avatarPath}`
+}
+
+// 用户下拉菜单命令
+function handleUserCommand(command: string) {
+  if (command === 'profile') {
+    router.push('/user-profile')
+  } else if (command === 'logout') {
+    userStore.logout()
+    router.push('/login')
+  }
+}
 
 // 根据时间显示不同的问候语
 const greeting = computed(() => {
@@ -611,6 +660,7 @@ async function handleSwitchToMember(member: any) {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 24px;
 }
 
 .welcome-text {
@@ -638,8 +688,13 @@ async function handleSwitchToMember(member: any) {
   backdrop-filter: blur(10px);
   border-radius: var(--radius-md);
   padding: 20px 24px;
-  min-width: 180px;
+  width: 160px;
+  height: 160px;
   border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .calendar-date {
@@ -677,6 +732,97 @@ async function handleSwitchToMember(member: any) {
   padding: 2px 8px;
   border-radius: 10px;
   display: inline-block;
+}
+
+/* User Widget */
+.user-widget {
+  position: relative;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-md);
+  padding: 20px 24px;
+  width: 160px;
+  height: 160px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.user-avatar-wrapper {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  cursor: pointer;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.user-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: 600;
+  color: white;
+}
+
+.user-widget .user-info-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.user-widget .user-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+}
+
+.user-role-dropdown {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 12px;
+  transition: background 0.2s ease;
+}
+
+.user-role-dropdown:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.user-widget .user-role {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.user-arrow {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  transition: transform 0.2s ease;
+}
+
+.user-role-dropdown:hover .user-arrow {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 /* Stats Grid */

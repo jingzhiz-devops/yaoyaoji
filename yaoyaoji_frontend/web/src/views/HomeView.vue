@@ -48,33 +48,6 @@
             <span>家庭管理</span>
           </el-menu-item>
         </el-menu>
-
-        <div class="sidebar-footer">
-          <div class="user-card">
-            <el-avatar :size="40" :src="userAvatar" class="user-avatar">
-              {{ userStore.user?.username?.charAt(0).toUpperCase() }}
-            </el-avatar>
-            <div class="user-info-text">
-              <span class="username">{{ userStore.user?.username }}</span>
-              <span class="role">家庭管理员</span>
-            </div>
-            <el-dropdown @command="handleCommand" trigger="click">
-              <el-icon class="settings-icon"><Setting /></el-icon>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="userProfile">
-                    <el-icon><User /></el-icon>
-                    用户信息
-                  </el-dropdown-item>
-                  <el-dropdown-item command="logout" divided>
-                    <el-icon><SwitchButton /></el-icon>
-                    退出登录
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-          </div>
-        </div>
       </el-aside>
 
       <el-container class="content-container">
@@ -96,17 +69,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { 
   House, Box, Clock, Document, ChatDotRound, User, UserFilled, 
-  SwitchButton, FirstAidKit, Setting, CircleCheck
+  SwitchButton, FirstAidKit, CircleCheck
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const activeMenu = computed(() => route.path)
-
-const userAvatar = computed(() => {
-  return '' // Placeholder for now, can be linked to real avatar url
-})
 
 onMounted(async () => {
   if (userStore.token && !userStore.user) {
@@ -211,58 +180,6 @@ function handleLogout() {
 :deep(.el-menu-item .el-icon) {
   font-size: 20px;
   margin-right: 12px;
-}
-
-/* Sidebar Footer */
-.sidebar-footer {
-  padding: 20px;
-  border-top: 1px solid var(--color-border);
-}
-
-.user-card {
-  display: flex;
-  align-items: center;
-  padding: 12px;
-  background-color: var(--color-bg-page);
-  border-radius: var(--radius-md);
-  gap: 12px;
-}
-
-.user-avatar {
-  background-color: var(--color-secondary-light);
-  color: white;
-  font-weight: 600;
-}
-
-.user-info-text {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.username {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text-main);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.role {
-  font-size: 12px;
-  color: var(--color-text-light);
-}
-
-.settings-icon {
-  cursor: pointer;
-  color: var(--color-text-light);
-  transition: color 0.3s;
-}
-
-.settings-icon:hover {
-  color: var(--color-primary);
 }
 
 /* Main Content Area */

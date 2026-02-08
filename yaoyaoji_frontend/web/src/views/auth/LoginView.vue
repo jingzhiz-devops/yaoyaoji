@@ -232,8 +232,10 @@ async function handleRegister() {
         ElMessage.success('注册成功，请登录')
         activeTab.value = 'login'
         loginForm.username = registerForm.username
-      } catch (error) {
-        ElMessage.error('注册失败')
+      } catch (error: any) {
+        // 显示后端返回的具体错误信息
+        const errorMsg = error.response?.data?.detail || '注册失败，请稍后重试'
+        ElMessage.error(errorMsg)
       } finally {
         loading.value = false
       }

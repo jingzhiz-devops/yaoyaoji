@@ -52,6 +52,8 @@ app.include_router(chronic_disease_router)  # 慢性病管理
 # 配置静态文件服务（用于访问上传的图片）
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
+(UPLOAD_DIR / "medicine_images").mkdir(exist_ok=True)
+(UPLOAD_DIR / "avatars").mkdir(exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 

@@ -40,6 +40,7 @@ class UserLogin(BaseModel):
 class UserResponse(UserBase):
     """用户响应Schema"""
     id: int
+    avatar: Optional[str] = None
     created_at: datetime
     
     class Config:
