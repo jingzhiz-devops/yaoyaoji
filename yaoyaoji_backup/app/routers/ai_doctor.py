@@ -153,15 +153,26 @@ async def ai_medical_predict(request: SymptomRequest):
     if not request.symptom_description or not request.symptom_description.strip():
         raise HTTPException(status_code=400, detail="症状描述不能为空")
     
-    # 检查OpenAI库是否可用
-    if OpenAI is None:
-        raise HTTPException(
-            status_code=500,
-            detail="AI服务未配置，请联系管理员安装openai库"
-        )
-    
     symptom_text = request.symptom_description.strip()
     logger.info(f"收到症状描述: {symptom_text}")
+    
+    # 检查OpenAI库是否可用
+    if OpenAI is None:
+        logger.warning("OpenAI库未安装，使用模拟AI建议")
+        mock_suggestion = generate_mock_suggestion(symptom_text)
+        return AIResponse(
+            suggestion=mock_suggestion,
+            timestamp=datetime.now().isoformat()
+        )
+    
+    # 检查API Key是否配置
+    if not settings.DEEPSEEK_API_KEY or settings.DEEPSEEK_API_KEY == "sk-your-deepseek-api-key" or settings.DEEPSEEK_API_KEY.startswith("sk-your"):
+        logger.warning("DeepSeek API Key未配置，使用模拟AI建议")
+        mock_suggestion = generate_mock_suggestion(symptom_text)
+        return AIResponse(
+            suggestion=mock_suggestion,
+            timestamp=datetime.now().isoformat()
+        )
     
     try:
         # 创建 DeepSeek 客户端（高延迟网络优化）
@@ -282,11 +293,16 @@ async def ai_query_medicine(request: MedicineQueryRequest):
     if not request.medicine_name or not request.medicine_name.strip():
         raise HTTPException(status_code=400, detail="药品名称不能为空")
     
-    if OpenAI is None:
-        raise HTTPException(status_code=500, detail="AI服务未配置")
-    
     medicine_name = request.medicine_name.strip()
     logger.info(f"收到药品查询: {medicine_name}")
+    
+    # 检查OpenAI库和API Key是否可用
+    if OpenAI is None or not settings.DEEPSEEK_API_KEY or settings.DEEPSEEK_API_KEY == "sk-your-deepseek-api-key" or settings.DEEPSEEK_API_KEY.startswith("sk-your"):
+        logger.warning("AI服务未配置，返回提示信息")
+        return AIResponse(
+            suggestion=f"抱歉，暂时无法查询药品『{medicine_name}』的详细信息。\n\n原因：AI服务未配置\n建议：请检查环境变量配置或稍后重试，也可咨询医师、药师。",
+            timestamp=datetime.now().isoformat()
+        )
     
     try:
         # 创建 DeepSeek 客户端（高延迟网络优化）
@@ -351,11 +367,16 @@ async def ai_query_disease(request: DiseaseQueryRequest):
     if not request.disease_name or not request.disease_name.strip():
         raise HTTPException(status_code=400, detail="疾病名称不能为空")
     
-    if OpenAI is None:
-        raise HTTPException(status_code=500, detail="AI服务未配置")
-    
     disease_name = request.disease_name.strip()
     logger.info(f"收到疾病查询: {disease_name}")
+    
+    # 检查OpenAI库和API Key是否可用
+    if OpenAI is None or not settings.DEEPSEEK_API_KEY or settings.DEEPSEEK_API_KEY == "sk-your-deepseek-api-key" or settings.DEEPSEEK_API_KEY.startswith("sk-your"):
+        logger.warning("AI服务未配置，返回提示信息")
+        return AIResponse(
+            suggestion=f"抱歉，暂时无法查询疾病『{disease_name}』的详细信息。\n\n原因：AI服务未配置\n建议：请检查环境变量配置或稍后重试，也可咨询专业医师。",
+            timestamp=datetime.now().isoformat()
+        )
     
     try:
         # 创建 DeepSeek 客户端（高延迟网络优化）

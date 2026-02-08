@@ -8,6 +8,10 @@ export interface User {
   username: string
   email?: string
   avatar?: string
+  birth_date?: string
+  real_name?: string
+  is_family_admin?: boolean  // 是否家庭管理员
+  relation_to_admin?: string  // 与管理员的关系（角色）：parent/child/elderly/spouse/other/admin/member
   created_at: string
 }
 

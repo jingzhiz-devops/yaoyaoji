@@ -41,6 +41,10 @@ class UserResponse(UserBase):
     """用户响应Schema"""
     id: int
     avatar: Optional[str] = None
+    birth_date: Optional[date] = None
+    real_name: Optional[str] = None
+    is_family_admin: bool = True  # 是否家庭管理员
+    relation_to_admin: Optional[str] = None  # 与管理员的关系（角色）：parent/child/elderly/spouse/other/admin/member
     created_at: datetime
     
     class Config:

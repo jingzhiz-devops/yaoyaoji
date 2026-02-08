@@ -436,9 +436,11 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { healthProfileAPI } from '@/api'
+import { useUserStore } from '@/stores/user'
 import { User, Warning, Connection, KnifeFork, DocumentChecked, Aim } from '@element-plus/icons-vue'
 
 const route = useRoute()
+const userStore = useUserStore()
 const activeTab = ref('basic')
 const saving = ref(false)
 
@@ -614,6 +616,8 @@ async function saveBasicInfo() {
       submitData.birth_date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` as any
     }
     await healthProfileAPI.createOrUpdate(submitData)
+    // 刷新用户信息，同步更新User表的birth_date
+    await userStore.fetchUserInfo()
     ElMessage.success('保存成功')
   } catch (error: any) {
     ElMessage.error(error.response?.data?.detail || '保存失败')

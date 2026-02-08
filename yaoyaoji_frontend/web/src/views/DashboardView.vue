@@ -29,7 +29,7 @@
         </div>
         <el-dropdown @command="handleUserCommand" trigger="click">
           <span class="user-role-dropdown">
-            <span class="user-role">家庭管理员</span>
+            <span class="user-role">{{ userRoleText }}</span>
             <el-icon class="user-arrow"><ArrowDown /></el-icon>
           </span>
           <template #dropdown>
@@ -379,6 +379,26 @@ const lunarFestival = computed(() => {
 
 const username = computed(() => userStore.user?.username || '用户')
 
+// 根据用户角色显示文本
+function getRoleText(role: string | undefined): string {
+  if (!role) return '普通成员'
+  
+  const roleMap: Record<string, string> = {
+    admin: '家庭管理员',
+    member: '普通成员',
+    parent: '家长',
+    child: '儿童',
+    elderly: '老人',
+    spouse: '配偶',
+    other: '其他'
+  }
+  return roleMap[role] || role
+}
+
+const userRoleText = computed(() => {
+  return getRoleText(userStore.user?.relation_to_admin)
+})
+
 // 获取用户头像完整URL
 function getUserAvatarUrl(avatarPath: string) {
   if (!avatarPath) return ''
@@ -421,10 +441,12 @@ const bmi = computed(() => {
   return '-'
 })
 
-// 计算年龄
+// 计算年龄 - 使用User表的birth_date，与家庭管理保持一致
 const age = computed(() => {
-  if (healthProfile.value?.birth_date) {
-    const birthDate = new Date(healthProfile.value.birth_date)
+  // 优先使用User表的birth_date，如果没有则使用HealthProfile表的birth_date作为后备
+  const birthDateStr = userStore.user?.birth_date || healthProfile.value?.birth_date
+  if (birthDateStr) {
+    const birthDate = new Date(birthDateStr)
     const today = new Date()
     let calculatedAge = today.getFullYear() - birthDate.getFullYear()
     const monthDiff = today.getMonth() - birthDate.getMonth()

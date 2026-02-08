@@ -53,11 +53,14 @@ async def create_or_update_health_profile(
             HealthProfile.user_id == current_user.id
         ).first()
         
-        # 不再同步姓名到User表，健康档案姓名与User表姓名分开管理
+        # 同步出生日期到User表
+        profile_dict = profile_data.model_dump(exclude_unset=True)
+        if 'birth_date' in profile_dict and profile_dict['birth_date'] is not None:
+            current_user.birth_date = profile_dict['birth_date']
         
         if existing:
             # 更新
-            for key, value in profile_data.model_dump(exclude_unset=True).items():
+            for key, value in profile_dict.items():
                 setattr(existing, key, value)
             db.commit()
             db.refresh(existing)
@@ -66,7 +69,7 @@ async def create_or_update_health_profile(
             # 创建
             profile = HealthProfile(
                 user_id=current_user.id,
-                **profile_data.model_dump()
+                **profile_dict
             )
             db.add(profile)
             db.commit()
