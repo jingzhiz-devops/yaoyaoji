@@ -132,6 +132,18 @@
                   </span>
                 </div>
               </div>
+              <div class="schedule-actions">
+                <el-button 
+                  circle 
+                  size="small" 
+                  type="danger" 
+                  plain 
+                  @click="handleDeleteSchedule(schedule.id)"
+                  title="删除提醒"
+                >
+                  <el-icon><Delete /></el-icon>
+                </el-button>
+              </div>
             </div>
           </div>
           <el-empty v-else description="今日暂无用药提醒" :image-size="100" />
@@ -331,7 +343,7 @@ import { useUserStore } from '@/stores/user'
 import { scheduleAPI, symptomAPI, recordAPI, healthProfileAPI, familyAPI } from '@/api'
 import { 
   Box, AlarmClock, Calendar, Notebook, Timer, UserFilled, 
-  DataLine, Files, DocumentChecked, KnifeFork, ArrowDown, User, SwitchButton 
+  DataLine, Files, DocumentChecked, KnifeFork, Delete 
 } from '@element-plus/icons-vue'
 import { Lunar, Solar } from 'lunar-javascript'
 
@@ -508,6 +520,27 @@ async function fetchTodaySchedules() {
     })
   } catch (error) {
     console.error('获取今日用药计划失败:', error)
+  }
+}
+
+async function handleDeleteSchedule(scheduleId: number) {
+  try {
+    await ElMessageBox.confirm('确定要删除这个用药提醒吗？', '提示', {
+      type: 'warning',
+      confirmButtonText: '确定',
+      cancelButtonText: '取消'
+    })
+    
+    await scheduleAPI.delete(scheduleId)
+    ElMessage.success('删除成功')
+    // 重新获取今日用药计划
+    await fetchTodaySchedules()
+    // 重新获取用药计划天数统计
+    await fetchMedicationScheduleDays()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error('删除失败：' + (error.response?.data?.detail || error.message))
+    }
   }
 }
 
@@ -979,6 +1012,11 @@ async function handleSwitchToMember(member: any) {
   background-color: var(--color-bg-page);
   border-radius: var(--radius-sm);
   padding: 12px 16px;
+  position: relative;
+}
+
+.schedule-item:hover .schedule-actions {
+  opacity: 1;
 }
 
 .schedule-time-line {
@@ -1025,6 +1063,14 @@ async function handleSwitchToMember(member: any) {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+}
+
+.schedule-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
 /* Family Grid */

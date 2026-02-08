@@ -120,6 +120,12 @@ async def delete_schedule(
             detail="用药计划不存在"
         )
     
+    # 先删除所有关联的用药记录（因为 schedule_id 不允许为 NULL，需要先删除关联记录）
+    db.query(MedicationRecord).filter(
+        MedicationRecord.schedule_id == schedule_id
+    ).delete()
+    
+    # 然后删除用药计划
     db.delete(schedule)
     db.commit()
     

@@ -5,7 +5,8 @@ import axios from 'axios'
 import type { AxiosInstance } from 'axios'
 import { ElMessage } from 'element-plus'
 
-export const API_BASE_URL = 'http://localhost:8000/api'
+// 支持环境变量配置，如果没有则使用默认值
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
 
 const service: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,

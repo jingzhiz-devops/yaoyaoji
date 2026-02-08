@@ -62,10 +62,10 @@
           </div>
 
           <div class="schedule-actions">
-            <el-button circle type="primary" plain @click="handleEdit(row)">
+            <el-button circle type="primary" plain @click.stop="handleEdit(row)">
               <el-icon><Edit /></el-icon>
             </el-button>
-            <el-button circle type="danger" plain @click="handleDelete(row.id)">
+            <el-button circle type="danger" plain @click.stop="handleDelete(row.id)">
               <el-icon><Delete /></el-icon>
             </el-button>
           </div>
@@ -393,8 +393,25 @@ async function handleDelete(id: number) {
     await scheduleAPI.delete(id)
     ElMessage.success('删除成功')
     await fetchSchedules()
-  } catch (error) {
-    // Cancelled
+  } catch (error: any) {
+    if (error !== 'cancel' && error !== 'close') {
+      console.error('删除失败:', error)
+      
+      // 更详细的错误信息
+      let errorMessage = '删除失败'
+      if (error.response) {
+        // 服务器返回了响应
+        errorMessage += `：${error.response.data?.detail || error.response.data?.message || error.response.statusText || '服务器错误'}`
+      } else if (error.request) {
+        // 请求已发出但没有收到响应（网络错误）
+        errorMessage += '：网络错误，请检查后端服务是否正常运行'
+      } else {
+        // 其他错误
+        errorMessage += `：${error.message || '未知错误'}`
+      }
+      
+      ElMessage.error(errorMessage)
+    }
   }
 }
 
@@ -664,6 +681,9 @@ function needsReplenishReminder(schedule: any): boolean {
 .schedule-actions {
   display: flex;
   gap: 8px;
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
 }
 
 /* Time Picker Grid */

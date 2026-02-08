@@ -371,6 +371,12 @@ async def update_family_member(
         target_user.relation_to_admin = update_data.role
     if update_data.birth_date is not None:
         target_user.birth_date = update_data.birth_date
+        # 同步更新健康档案的出生日期
+        health_profile = db.query(HealthProfile).filter(
+            HealthProfile.user_id == target_user.id
+        ).first()
+        if health_profile:
+            health_profile.birth_date = update_data.birth_date
     if update_data.notes is not None:
         target_user.member_notes = update_data.notes
     

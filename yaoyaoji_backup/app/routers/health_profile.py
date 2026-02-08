@@ -34,9 +34,23 @@ async def get_my_health_profile(
     if not profile:
         # 如果不存在，自动创建一个空档案
         profile = HealthProfile(user_id=current_user.id)
+        # 如果User表有出生日期，同步到健康档案
+        if current_user.birth_date:
+            profile.birth_date = current_user.birth_date
         db.add(profile)
         db.commit()
         db.refresh(profile)
+    else:
+        # 优先使用User表的出生日期，如果User表有但HealthProfile没有，则同步
+        if current_user.birth_date and not profile.birth_date:
+            profile.birth_date = current_user.birth_date
+            db.commit()
+            db.refresh(profile)
+        # 如果User表的出生日期更新了，也同步到HealthProfile
+        elif current_user.birth_date and profile.birth_date != current_user.birth_date:
+            profile.birth_date = current_user.birth_date
+            db.commit()
+            db.refresh(profile)
     
     return profile
 
@@ -53,27 +67,40 @@ async def create_or_update_health_profile(
             HealthProfile.user_id == current_user.id
         ).first()
         
-        # 同步出生日期到User表
-        profile_dict = profile_data.model_dump(exclude_unset=True)
-        if 'birth_date' in profile_dict and profile_dict['birth_date'] is not None:
-            current_user.birth_date = profile_dict['birth_date']
+        # 不再同步姓名到User表，健康档案姓名与User表姓名分开管理
+        # 但出生日期需要同步到User表
         
         if existing:
             # 更新
-            for key, value in profile_dict.items():
+            birth_date_updated = False
+            for key, value in profile_data.model_dump(exclude_unset=True).items():
                 setattr(existing, key, value)
+                # 如果更新了出生日期，同步到User表
+                if key == 'birth_date' and value is not None:
+                    current_user.birth_date = value
+                    birth_date_updated = True
             db.commit()
             db.refresh(existing)
+            # 如果User表的出生日期更新了，刷新User对象
+            if birth_date_updated:
+                db.refresh(current_user)
             return existing
         else:
             # 创建
+            profile_data_dict = profile_data.model_dump()
+            # 如果提供了出生日期，同步到User表
+            if 'birth_date' in profile_data_dict and profile_data_dict['birth_date'] is not None:
+                current_user.birth_date = profile_data_dict['birth_date']
+            
             profile = HealthProfile(
                 user_id=current_user.id,
-                **profile_dict
+                **profile_data_dict
             )
             db.add(profile)
             db.commit()
             db.refresh(profile)
+            if 'birth_date' in profile_data_dict and profile_data_dict['birth_date'] is not None:
+                db.refresh(current_user)
             return profile
     except Exception as e:
         db.rollback()
