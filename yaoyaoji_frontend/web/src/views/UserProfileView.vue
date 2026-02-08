@@ -7,9 +7,26 @@
           <el-card class="profile-card" shadow="hover">
             <div class="profile-header">
               <div class="avatar-wrapper">
-                <div class="avatar-circle">
-                  {{ userStore.user?.username?.charAt(0).toUpperCase() }}
-                </div>
+                <el-upload
+                  class="avatar-uploader"
+                  :show-file-list="false"
+                  :before-upload="beforeAvatarUpload"
+                  :http-request="handleAvatarUpload"
+                  accept="image/*"
+                >
+                  <div class="avatar-circle" v-if="!userStore.user?.avatar">
+                    {{ userStore.user?.username?.charAt(0).toUpperCase() }}
+                    <div class="avatar-overlay">
+                      <el-icon><Camera /></el-icon>
+                    </div>
+                  </div>
+                  <div class="avatar-image-wrapper" v-else>
+                    <img :src="getAvatarUrl(userStore.user.avatar)" class="avatar-image" />
+                    <div class="avatar-overlay">
+                      <el-icon><Camera /></el-icon>
+                    </div>
+                  </div>
+                </el-upload>
               </div>
               <h3 class="username">{{ userStore.user?.username }}</h3>
               <p class="email">{{ userStore.user?.email || '未设置邮箱' }}</p>
@@ -121,8 +138,9 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
-import { authAPI } from '@/api'
-import { User, Lock, Key, Check } from '@element-plus/icons-vue'
+import { authAPI, uploadAPI } from '@/api'
+import { User, Lock, Key, Check, Camera } from '@element-plus/icons-vue'
+import type { UploadRequestOptions } from 'element-plus'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -144,6 +162,55 @@ const passwordForm = ref({
   newPassword: '',
   confirmPassword: ''
 })
+
+const avatarUploading = ref(false)
+
+// 获取头像完整URL
+function getAvatarUrl(avatarPath: string) {
+  if (!avatarPath) return ''
+  if (avatarPath.startsWith('http')) return avatarPath
+  // 返回相对路径，会通过后端静态文件服务访问
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+  return `${baseUrl}${avatarPath}`
+}
+
+// 头像上传前校验
+function beforeAvatarUpload(file: File) {
+  const isImage = file.type.startsWith('image/')
+  const isLt5M = file.size / 1024 / 1024 < 5
+
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件!')
+    return false
+  }
+  if (!isLt5M) {
+    ElMessage.error('图片大小不能超过 5MB!')
+    return false
+  }
+  return true
+}
+
+// 处理头像上传
+async function handleAvatarUpload(options: UploadRequestOptions) {
+  avatarUploading.value = true
+  try {
+    // 上传文件
+    const uploadRes: any = await uploadAPI.uploadAvatar(options.file as File)
+    const avatarUrl = uploadRes.url
+    
+    // 更新用户头像
+    await authAPI.changeAvatar(avatarUrl)
+    
+    // 刷新用户信息
+    await userStore.fetchUserInfo()
+    
+    ElMessage.success('头像修改成功')
+  } catch (error: any) {
+    ElMessage.error(error.response?.data?.detail || '头像上传失败')
+  } finally {
+    avatarUploading.value = false
+  }
+}
 
 // 验证规则
 const usernameRules = {
@@ -332,6 +399,10 @@ onMounted(async () => {
   position: relative;
 }
 
+.avatar-uploader {
+  cursor: pointer;
+}
+
 .avatar-circle {
   width: 100px;
   height: 100px;
@@ -344,6 +415,48 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   box-shadow: 0 8px 20px rgba(42, 157, 143, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.avatar-image-wrapper {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(42, 157, 143, 0.3);
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+  border-radius: 50%;
+}
+
+.avatar-overlay .el-icon {
+  font-size: 24px;
+  color: white;
+}
+
+.avatar-circle:hover .avatar-overlay,
+.avatar-image-wrapper:hover .avatar-overlay {
+  opacity: 1;
 }
 
 .username {

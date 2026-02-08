@@ -192,3 +192,17 @@ async def change_username(
     db.commit()
     
     return MessageResponse(message="用户名修改成功")
+
+
+@router.patch("/change-avatar", response_model=MessageResponse)
+async def change_avatar(
+    avatar_url: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """修改用户头像"""
+    # 更新头像
+    current_user.avatar = avatar_url
+    db.commit()
+    
+    return MessageResponse(message="头像修改成功")

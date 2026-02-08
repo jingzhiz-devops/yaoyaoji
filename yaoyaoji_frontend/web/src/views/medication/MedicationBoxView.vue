@@ -52,7 +52,7 @@
             <p class="contraindications-text">{{ med.medicine.contraindications }}</p>
           </div>
 
-          <div class="notes-section" v-if="med.notes">
+          <div class="notes-section" v-if="med.notes && med.notes.trim()">
             <div class="section-label">备注</div>
             <p class="notes-text">{{ med.notes }}</p>
           </div>
@@ -90,36 +90,78 @@
           </el-col>
         </el-row>
 
-        <el-form-item label="禁忌信息" prop="contraindications" required>
+        <el-form-item label="禁忌信息" prop="contraindications">
           <el-input 
             v-model="form.contraindications" 
             type="textarea" 
             :rows="3"
-            placeholder="请输入药品禁忌信息，这对AI医生判断很重要" 
+            placeholder="请输入药品禁忌信息,这对AI医生判断很重要(可选)" 
           />
         </el-form-item>
 
         <el-form-item label="药品包装图">
-          <div class="upload-wrapper">
-            <el-upload
-              class="medicine-image-uploader"
-              :action="''"
-              :auto-upload="false"
-              :show-file-list="false"
-              :on-change="handleImageChange"
-              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+          <div 
+            class="upload-wrapper"
+            @paste.capture="handlePaste"
+            tabindex="-1"
+          >
+            <div 
+              class="medicine-image-uploader-custom"
+              @click="fileInputRef?.$el.querySelector('input[type=file]')?.click()"
+              @dragover.prevent="isDragging = true"
+              @dragleave.prevent="isDragging = false"
+              @drop.prevent="handleDrop"
+              :class="{ dragging: isDragging }"
             >
-              <img v-if="form.image_url" :src="getImageUrl(form.image_url)" class="uploaded-image" />
-              <div v-else class="upload-placeholder">
-                <el-icon class="upload-icon"><Plus /></el-icon>
-                <span>点击上传图片</span>
-              </div>
-            </el-upload>
+              <el-upload
+                ref="fileInputRef"
+                class="medicine-image-uploader"
+                :action="''"
+                :auto-upload="false"
+                :show-file-list="false"
+                :on-change="handleImageChange"
+                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+              >
+                <img v-if="form.image_url" :src="getImageUrl(form.image_url)" class="uploaded-image" />
+                <div v-else class="upload-placeholder">
+                  <el-icon class="upload-icon"><Plus /></el-icon>
+                  <div class="upload-text">
+                    <span class="main-text">点击上传或粘贴图片</span>
+                    <span class="sub-text">也可拖拽或拍照上传</span>
+                  </div>
+                </div>
+              </el-upload>
+            </div>
+            <div class="upload-actions">
+              <el-button size="small" @click.stop="handleFileClick">
+                <el-icon><Plus /></el-icon>
+                点击上传
+              </el-button>
+              <el-button size="small" @click.stop="handleCameraClick">
+                <el-icon><Camera /></el-icon>
+                拍照上传
+              </el-button>
+              <el-button v-if="form.image_url" size="small" link type="danger" @click.stop="handleRemoveImage">删除图片</el-button>
+            </div>
             <div class="upload-tip">
               支持 JPG、PNG、WEBP 格式，最大 5MB
-              <el-button v-if="form.image_url" link type="danger" @click.stop="handleRemoveImage">删除图片</el-button>
             </div>
           </div>
+          <input 
+            ref="fileInputRef2"
+            type="file" 
+            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" 
+            style="display: none;"
+            @change="handleFileInputChange"
+          />
+          <input 
+            ref="cameraInputRef"
+            type="file" 
+            accept="image/*" 
+            capture="user"
+            style="display: none;"
+            @change="handleCameraInputChange"
+          />
         </el-form-item>
 
         <el-form-item label="功效与备注">
@@ -153,7 +195,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Picture, Edit, Delete, FirstAidKit, Warning } from '@element-plus/icons-vue'
+import { Plus, Picture, Edit, Delete, FirstAidKit, Warning, Camera } from '@element-plus/icons-vue'
 import { useMedicationStore } from '@/stores/medication'
 import { uploadAPI } from '@/api'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -166,6 +208,10 @@ const loading = ref(false)
 const formRef = ref<FormInstance>()
 const uploadedFile = ref<File | null>(null)
 const editingId = ref<number | null>(null)
+const fileInputRef = ref<any>(null)
+const fileInputRef2 = ref<HTMLInputElement>()
+const cameraInputRef = ref<HTMLInputElement>()
+const isDragging = ref(false)
 
 // 解决预览放大时闪动
 const previewSrcListMap = reactive<Record<number, string[]>>({})
@@ -205,9 +251,6 @@ const formRules: FormRules = {
   name: [
     { required: true, message: '请输入药品名称', trigger: 'blur' },
     { min: 1, max: 100, message: '药品名称长度1-100个字符', trigger: 'blur' }
-  ],
-  contraindications: [
-    { required: true, message: '请输入禁忌信息', trigger: 'blur' }
   ]
 }
 
@@ -237,6 +280,117 @@ async function handleImageChange(file: UploadFile) {
     form.image_url = e.target?.result as string
   }
   reader.readAsDataURL(file.raw)
+}
+
+function handlePaste(event: ClipboardEvent) {
+  event.preventDefault()
+  event.stopPropagation()
+  
+  const items = event.clipboardData?.items
+  if (!items) {
+    console.log('粘贴事件:未获取到剪贴板数据')
+    return
+  }
+  
+  console.log('粘贴事件触发,剪贴板内容数量:', items.length)
+  
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i]
+    console.log(`项目 ${i}:`, item.type)
+    if (item && item.type.startsWith('image/')) {
+      const file = item.getAsFile()
+      if (file) {
+        console.log('检测到粘贴的图片:', file.name, file.type, file.size)
+        ElMessage.success('检测到粘贴图片,正在处理...')
+        processImageFile(file)
+      }
+      return
+    }
+  }
+  
+  console.log('粘贴事件:未检测到图片')
+}
+
+function handleDrop(event: DragEvent) {
+  isDragging.value = false
+  const files = event.dataTransfer?.files
+  if (!files || files.length === 0) return
+  
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i]
+    if (file && file.type.startsWith('image/')) {
+      processImageFile(file)
+      return
+    }
+  }
+  ElMessage.error('请拖拽图片文件')
+}
+
+function handleFileClick() {
+  console.log('点击上传按钮')
+  fileInputRef2.value?.click()
+}
+
+function handleFileInputChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (input.files && input.files.length > 0 && input.files[0]) {
+    const file = input.files[0]
+    console.log('选择文件:', file.name, file.type, file.size)
+    processImageFile(file)
+    input.value = '' // Reset input
+  }
+}
+
+function handleCameraClick() {
+  console.log('拍照上传按钮')
+  cameraInputRef.value?.click()
+}
+
+function handleCameraInputChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (input.files && input.files.length > 0 && input.files[0]) {
+    const file = input.files[0]
+    console.log('拍照文件:', file.name, file.type, file.size)
+    ElMessage.success('获取拍照图片,正在处理...')
+    processImageFile(file)
+    input.value = '' // Reset input
+  } else {
+    console.log('拍照:未获取到文件')
+  }
+}
+
+function processImageFile(file: File) {
+  console.log('开始处理图片文件:', file.name, file.type, file.size)
+  
+  const maxSize = 5 * 1024 * 1024 // 5MB
+  if (file.size > maxSize) {
+    ElMessage.error('图片大小不能超过 5MB')
+    console.error('图片太大:', file.size)
+    return
+  }
+  
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+  if (!allowedTypes.includes(file.type)) {
+    ElMessage.error('只支持 JPG、PNG、GIF、WEBP 格式的图片')
+    console.error('不支持的图片类型:', file.type)
+    return
+  }
+  
+  uploadedFile.value = file
+  console.log('图片文件已设置到 uploadedFile')
+  
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const result = e.target?.result as string
+    form.image_url = result
+    console.log('图片预览已加载,长度:', result.length)
+    ElMessage.success('图片加载成功')
+  }
+  reader.onerror = (e) => {
+    console.error('读取图片失败:', e)
+    ElMessage.error('读取图片失败')
+  }
+  reader.readAsDataURL(file)
 }
 
 function handleRemoveImage() {
@@ -307,9 +461,9 @@ async function handleSubmit() {
       if (editingId.value) {
         const updateData: any = {
           medicine_name: form.name,
-          contraindications: form.contraindications,
-          manufacturer: form.manufacturer || undefined,
-          notes: form.notes || undefined
+          contraindications: form.contraindications || '',
+          manufacturer: form.manufacturer || '',
+          notes: form.notes || ''
         }
         
         if (imageUrl) {
@@ -531,7 +685,6 @@ async function handleRemove(id: number) {
 }
 
 .notes-section {
-  margin-top: auto;
   padding-top: 12px;
   border-top: 1px solid var(--color-border);
 }
@@ -553,43 +706,92 @@ async function handleRemove(id: number) {
   gap: 12px;
 }
 
-.medicine-image-uploader :deep(.el-upload) {
-  border: 1px dashed var(--el-border-color);
+.medicine-image-uploader-custom {
+  border: 2px dashed var(--el-border-color);
   border-radius: 8px;
+  transition: all 0.3s ease;
+  padding: 0;
+  outline: none;
+  background-color: #fafbfc;
+  overflow: hidden;
+}
+
+.medicine-image-uploader-custom:focus {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
+}
+
+.medicine-image-uploader-custom.dragging {
+  border-color: var(--el-color-primary);
+  background-color: #f0f9ff;
+}
+
+.medicine-image-uploader :deep(.el-upload) {
+  border: none;
   cursor: pointer;
   position: relative;
   overflow: hidden;
   transition: var(--el-transition-duration-fast);
-  width: 120px;
-  height: 120px;
+  width: 100%;
+  min-height: 180px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f8f9fa;
+  background-color: transparent;
 }
 
 .medicine-image-uploader :deep(.el-upload:hover) {
-  border-color: var(--color-primary);
-  background-color: #f0f9ff;
+  background-color: rgba(64, 158, 255, 0.05);
 }
 
 .upload-placeholder {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   color: #909399;
   font-size: 12px;
+  gap: 12px;
+  padding: 40px 20px;
+  width: 100%;
+}
+
+.upload-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.upload-text .main-text {
+  color: #606266;
+  font-weight: 500;
+}
+
+.upload-text .sub-text {
+  color: #909399;
+  font-size: 11px;
 }
 
 .upload-icon {
-  font-size: 24px;
-  margin-bottom: 8px;
+  font-size: 32px;
+  color: #c0c4cc;
 }
 
 .uploaded-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.upload-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.upload-actions .el-button {
+  flex: 0 1 auto;
 }
 
 .upload-tip {

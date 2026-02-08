@@ -1,19 +1,131 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime
+import logging
+import time
 try:
     from openai import OpenAI
+    import httpx
 except ImportError:
     OpenAI = None
+    httpx = None
 import os
-from datetime import datetime
 from ..config import settings
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/ai", tags=["AI医生"])
 
-# DeepSeek API配置
-DEEPSEEK_API_KEY = "sk-xxxx"
-DEEPSEEK_BASE_URL = "https://api.deepseek.com"
+def create_deepseek_client(timeout: float = 120.0):
+    """
+    创建 DeepSeek API 客户端
+    
+    Args:
+        timeout: 请求超时时间（秒）
+    
+    Returns:
+        OpenAI 客户端实例
+    """
+    if OpenAI is None or httpx is None:
+        raise RuntimeError("OpenAI 库未安装")
+    
+    try:
+        # 检查是否配置了代理
+        proxy = os.getenv('HTTPS_PROXY') or os.getenv('https_proxy') or os.getenv('HTTP_PROXY') or os.getenv('http_proxy')
+        
+        # 创建自定义 HTTP 客户端以提高稳定性
+        http_client_config = {
+            "timeout": httpx.Timeout(timeout, connect=30.0, read=timeout, write=30.0, pool=10.0),
+            "limits": httpx.Limits(
+                max_keepalive_connections=5,
+                max_connections=10,
+                keepalive_expiry=30.0
+            ),
+            "verify": True,  # 验证 SSL 证书
+            "follow_redirects": True,  # 跟随重定向
+            "http2": False  # 禁用 HTTP/2 以提高兼容性
+        }
+        
+        # 如果有代理配置，添加到客户端
+        if proxy:
+            http_client_config["proxies"] = proxy
+            logger.info(f"使用代理: {proxy}")
+        
+        http_client = httpx.Client(**http_client_config)
+        
+        client = OpenAI(
+            api_key=settings.DEEPSEEK_API_KEY,
+            base_url=settings.DEEPSEEK_BASE_URL,
+            http_client=http_client,
+            timeout=timeout,
+            max_retries=0  # 禁用内置重试，使用我们自己的重试逻辑
+        )
+        
+        logger.info(f"DeepSeek 客户端已创建 (BaseURL: {settings.DEEPSEEK_BASE_URL}, Timeout: {timeout}s)")
+        return client
+    except Exception as e:
+        logger.error(f"创建 DeepSeek 客户端失败: {type(e).__name__}: {str(e)}")
+        raise
+
+def call_deepseek_api(client, messages: list, model: str = "deepseek-chat", temperature: float = 0.7, max_tokens: int = 1000, max_retries: int = 3):
+    """
+    调用 DeepSeek API 并支持重试
+    
+    Args:
+        client: OpenAI 客户端
+        messages: 消息列表
+        model: 模型名称
+        temperature: 温度参数
+        max_tokens: 最大令牌数
+        max_retries: 最大重试次数
+    
+    Returns:
+        API 响应文本
+    """
+    last_error = None
+    
+    for attempt in range(max_retries):
+        try:
+            if attempt > 0:
+                wait_time = min(2 ** attempt, 10)  # 指数退避: 2s, 4s, 8s, 最多10s
+                logger.info(f"等待 {wait_time} 秒后进行第 {attempt + 1} 次重试...")
+                time.sleep(wait_time)
+            
+            logger.info(f"调用 DeepSeek API (尝试 {attempt + 1}/{max_retries})")
+            
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=False
+            )
+            
+            ai_response = response.choices[0].message.content or "未获取到AI回复"
+            logger.info(f"DeepSeek API 调用成功，响应长度: {len(ai_response)}")
+            return ai_response
+            
+        except Exception as e:
+            last_error = e
+            error_type = type(e).__name__
+            error_msg = str(e)
+            
+            logger.warning(f"第 {attempt + 1} 次尝试失败 - {error_type}: {error_msg}")
+            
+            # 检查是否为网络连接错误
+            if "Connection" in error_type or "connection" in error_msg.lower():
+                logger.warning("检测到网络连接错误，诊断信息：")
+                logger.warning(f"  - API Key 长度: {len(settings.DEEPSEEK_API_KEY) if settings.DEEPSEEK_API_KEY else 0}")
+                logger.warning(f"  - Base URL: {settings.DEEPSEEK_BASE_URL}")
+                logger.warning(f"  - 可能原因: 1.网络不稳定 2.需要配置代理 3.防火墙阻止 4.DNS 解析失败")
+            
+            if attempt == max_retries - 1:
+                break
+    
+    # 所有重试都失败
+    if last_error:
+        raise last_error
 
 class SymptomRequest(BaseModel):
     """症状描述请求"""
@@ -49,15 +161,11 @@ async def ai_medical_predict(request: SymptomRequest):
         )
     
     symptom_text = request.symptom_description.strip()
-    print(f"📝 收到症状描述: {symptom_text}")
+    logger.info(f"收到症状描述: {symptom_text}")
     
     try:
-        # 初始化DeepSeek客户端
-        client = OpenAI(
-            api_key=settings.DEEPSEEK_API_KEY,
-            base_url=settings.DEEPSEEK_BASE_URL,
-            timeout=30.0  # 设置30秒超时
-        )
+        # 创建 DeepSeek 客户端（高延迟网络优化）
+        client = create_deepseek_client(timeout=120.0)
         
         # 构建专业的医疗问诊提示词
         system_prompt = """你是一位经验丰富的全科医生AI助手，名叫"药药记医生"。你的职责是：
@@ -77,23 +185,19 @@ async def ai_medical_predict(request: SymptomRequest):
 
         user_prompt = f"患者症状描述：{symptom_text}"
         
-        print(f"🤖 正在调用DeepSeek API...")
+        logger.info("正在调用DeepSeek API...")
         
-        # 调用DeepSeek API
-        response = client.chat.completions.create(
-            model="deepseek-chat",
+        # 调用 DeepSeek API（支持重试）
+        ai_suggestion = call_deepseek_api(
+            client,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
             temperature=0.7,
             max_tokens=1000,
-            stream=False
+            max_retries=2
         )
-        
-        # 提取AI回复
-        ai_suggestion = response.choices[0].message.content or "未获取到AI回复"
-        print(f"✅ AI回复成功，长度: {len(ai_suggestion)}")
         
         # 返回结果
         return AIResponse(
@@ -102,11 +206,12 @@ async def ai_medical_predict(request: SymptomRequest):
         )
         
     except Exception as e:
+        error_type = type(e).__name__
         error_msg = str(e)
-        print(f"❌ DeepSeek API调用失败: {error_msg}")
+        logger.error(f"DeepSeek API调用失败: {error_type}: {error_msg}")
         
         # 如果API调用失败，返回智能模拟建议
-        print("⚠️ 使用备用模拟AI建议")
+        logger.info("使用备用模拟AI建议")
         
         # 基于关键词生成模拟建议
         mock_suggestion = generate_mock_suggestion(symptom_text)
@@ -181,14 +286,11 @@ async def ai_query_medicine(request: MedicineQueryRequest):
         raise HTTPException(status_code=500, detail="AI服务未配置")
     
     medicine_name = request.medicine_name.strip()
-    print(f"💊 收到药品查询: {medicine_name}")
+    logger.info(f"收到药品查询: {medicine_name}")
     
     try:
-        client = OpenAI(
-            api_key=settings.DEEPSEEK_API_KEY,
-            base_url=settings.DEEPSEEK_BASE_URL,
-            timeout=30.0
-        )
+        # 创建 DeepSeek 客户端（高延迟网络优化）
+        client = create_deepseek_client(timeout=120.0)
         
         system_prompt = """你是一位专业的药学专家AI助手。你的职责是提供准确、全面的药品信息，包括：
 
@@ -198,7 +300,7 @@ async def ai_query_medicine(request: MedicineQueryRequest):
 4. 用法用量（常规剂量）
 5. 注意事项和禁忌症
 6. 常见副作用
-7. **药物相互作用和用药禁忌**：详细说明哪些药物不能与其同时服用，包括具体的药物名称和原因。如果没有已知的药物相互作用，请明确说明“暂无已知的药物相互作用禁忌”或“但仍需遵医嘱”。
+7. **药物相互作用和用药禁忌**：详细说明哪些药物不能与其同时服用，包括具体的药物名称和原因。如果没有已知的药物相互作用，请明确说明"暂无已知的药物相互作用禁忌"或"但仍需遵医嘱"。
 
 回答要求：
 - 信息准确、专业但易懂
@@ -209,21 +311,20 @@ async def ai_query_medicine(request: MedicineQueryRequest):
         
         user_prompt = f"请提供关于药品『{medicine_name}』的详细信息"
         
-        print(f"🤖 正在调用DeepSeek API查询药品...")
+        logger.info("正在调用DeepSeek API查询药品...")
         
-        response = client.chat.completions.create(
-            model="deepseek-chat",
+        ai_response = call_deepseek_api(
+            client,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
             temperature=0.3,  # 更低的温度以获得更准确的信息
             max_tokens=1200,
-            stream=False
+            max_retries=2
         )
         
-        ai_response = response.choices[0].message.content or "未获取到AI回复"
-        print(f"✅ 药品查询成功")
+        logger.info("药品查询成功")
         
         return AIResponse(
             suggestion=ai_response,
@@ -231,10 +332,13 @@ async def ai_query_medicine(request: MedicineQueryRequest):
         )
         
     except Exception as e:
-        print(f"❌ 药品查询失败: {str(e)}")
+        error_type = type(e).__name__
+        error_msg = str(e)
+        logger.error(f"药品查询失败: {error_type}: {error_msg}")
+        
         # 返回简化的回复
         return AIResponse(
-            suggestion=f"抱歉，暂时无法查询药品『{medicine_name}』的详细信息。请稍后重试或咨询医师、药师。",
+            suggestion=f"抱歉，暂时无法查询药品『{medicine_name}』的详细信息。\n\n原因：{error_type}\n建议：请检查网络连接或稍后重试，也可咨询医师、药师。",
             timestamp=datetime.now().isoformat()
         )
 
@@ -251,14 +355,11 @@ async def ai_query_disease(request: DiseaseQueryRequest):
         raise HTTPException(status_code=500, detail="AI服务未配置")
     
     disease_name = request.disease_name.strip()
-    print(f"🏥 收到疾病查询: {disease_name}")
+    logger.info(f"收到疾病查询: {disease_name}")
     
     try:
-        client = OpenAI(
-            api_key=settings.DEEPSEEK_API_KEY,
-            base_url=settings.DEEPSEEK_BASE_URL,
-            timeout=30.0
-        )
+        # 创建 DeepSeek 客户端（高延迟网络优化）
+        client = create_deepseek_client(timeout=120.0)
         
         system_prompt = """你是一位专业的医学专家AI助手。你的职责是提供准确、全面的疾病信息，包括：
 
@@ -267,7 +368,7 @@ async def ai_query_disease(request: DiseaseQueryRequest):
 3. 可能的病因和发病机制
 4. 诊断方法
 5. 治疗方案（包括药物治疗和非药物治疗）
-6. **常用药物及其用药禁忌**：列出常用治疗药物，并说明哪些药物之间不能同时使用。如果没有特殊禁忌，请说明“常规用药无明显禁忌，但应遵医嘱”。
+6. **常用药物及其用药禁忌**：列出常用治疗药物，并说明哪些药物之间不能同时使用。如果没有特殊禁忌，请说明"常规用药无明显禁忌，但应遵医嘱"。
 7. 预防措施
 8. 预后和注意事项
 
@@ -280,21 +381,20 @@ async def ai_query_disease(request: DiseaseQueryRequest):
         
         user_prompt = f"请提供关于疾病『{disease_name}』的详细信息"
         
-        print(f"🤖 正在调用DeepSeek API查询疾病...")
+        logger.info("正在调用DeepSeek API查询疾病...")
         
-        response = client.chat.completions.create(
-            model="deepseek-chat",
+        ai_response = call_deepseek_api(
+            client,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
             temperature=0.3,
             max_tokens=1500,
-            stream=False
+            max_retries=2
         )
         
-        ai_response = response.choices[0].message.content or "未获取到AI回复"
-        print(f"✅ 疾病查询成功")
+        logger.info("疾病查询成功")
         
         return AIResponse(
             suggestion=ai_response,
@@ -302,8 +402,11 @@ async def ai_query_disease(request: DiseaseQueryRequest):
         )
         
     except Exception as e:
-        print(f"❌ 疾病查询失败: {str(e)}")
+        error_type = type(e).__name__
+        error_msg = str(e)
+        logger.error(f"疾病查询失败: {error_type}: {error_msg}")
+        
         return AIResponse(
-            suggestion=f"抱歉，暂时无法查询疾病『{disease_name}』的详细信息。请稍后重试或咨询专业医师。",
+            suggestion=f"抱歉，暂时无法查询疾病『{disease_name}』的详细信息。\n\n原因：{error_type}\n建议：请检查网络连接或稍后重试，也可咨询专业医师。",
             timestamp=datetime.now().isoformat()
         )

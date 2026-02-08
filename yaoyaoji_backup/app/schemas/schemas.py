@@ -40,6 +40,7 @@ class UserLogin(BaseModel):
 class UserResponse(UserBase):
     """用户响应Schema"""
     id: int
+    avatar: Optional[str] = None
     created_at: datetime
     
     class Config:
@@ -146,6 +147,9 @@ class MedicationScheduleBase(BaseModel):
     frequency: FrequencyEnum = Field(..., description="频率")
     start_date: date = Field(..., description="开始日期")
     end_date: Optional[date] = Field(None, description="结束日期")
+    purchase_date: Optional[date] = Field(None, description="药品购入日期")
+    therapy_duration: Optional[int] = Field(None, description="吃药疗程（天数）")
+    remind_advance_days: int = Field(5, description="提前提醒备药天数")
 
 
 class MedicationScheduleCreate(MedicationScheduleBase):
@@ -291,6 +295,7 @@ class ConflictWarning(BaseModel):
 class HealthProfileBase(BaseModel):
     """健康档案基础Schema"""
     real_name: Optional[str] = Field(None, max_length=50, description="真实姓名")
+    birth_date: Optional[date] = Field(None, description="出生日期")
     blood_type: Optional[str] = Field(None, max_length=10, description="血型")
     height: Optional[int] = Field(None, ge=0, le=300, description="身高(cm)")
     weight: Optional[int] = Field(None, ge=0, le=500, description="体重(kg)")
@@ -475,5 +480,238 @@ class VaccinationRecordResponse(VaccinationRecordBase):
         from_attributes = True
 
 
+# ============= 慢性病相关 Schemas =============
+
+class ControlStatusEnum(str, Enum):
+    """控制状态枚举"""
+    GOOD = "good"
+    FAIR = "fair"
+    POOR = "poor"
+
+
+class DiseaseIndicatorBase(BaseModel):
+    """指标基础Schema"""
+    indicator_name: str = Field(..., max_length=100, description="指标名称")
+    normal_range_min: Optional[float] = Field(None, description="正常范围最小值")
+    normal_range_max: Optional[float] = Field(None, description="正常范围最大值")
+    unit: Optional[str] = Field(None, max_length=50, description="单位")
+    check_frequency: Optional[str] = Field(None, description="检查频率")
+
+
+class DiseaseIndicatorResponse(DiseaseIndicatorBase):
+    """指标响应Schema"""
+    id: int
+    disease_id: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class IndicatorRecordBase(BaseModel):
+    """指标记录基础Schema"""
+    indicator_id: int = Field(..., description="指标ID")
+    value: float = Field(..., description="数值")
+    measurement_date: datetime = Field(..., description="测量日期")
+    recorded_by: Optional[str] = Field(None, max_length=50, description="记录者")
+    notes: Optional[str] = Field(None, description="备注")
+
+
+class IndicatorRecordCreate(IndicatorRecordBase):
+    """指标记录创建 Schema"""
+    pass
+
+
+class IndicatorRecordResponse(IndicatorRecordBase):
+    """指标记录响应Schema"""
+    id: int
+    disease_id: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class FollowupPlanBase(BaseModel):
+    """随访计划基础Schema"""
+    frequency: str = Field(..., description="频率: weekly/monthly/quarterly/yearly")
+    next_followup_date: date = Field(..., description="下次随访日期")
+    responsible_doctor: Optional[str] = Field(None, max_length=100, description="负责医生")
+    followup_checklist: Optional[dict] = Field(None, description="随访下拉列表")
+    target_values: Optional[dict] = Field(None, description="目标值")
+    reminder_days: int = Field(7, description="提前提醒天数")
+
+
+class FollowupPlanCreate(FollowupPlanBase):
+    """随访计划创建 Schema"""
+    pass
+
+
+class FollowupPlanResponse(FollowupPlanBase):
+    """随访计划响应Schema"""
+    id: int
+    disease_id: int
+    last_followup_date: Optional[date] = None
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class FollowupRecordBase(BaseModel):
+    """随访记录基础Schema"""
+    followup_date: datetime = Field(..., description="随访日期")
+    symptoms_assessment: Optional[str] = Field(None, description="症状评估")
+    indicator_check: Optional[dict] = Field(None, description="指标检查结果")
+    medication_evaluation: Optional[str] = Field(None, description="用药评价")
+    lifestyle_guidance: Optional[str] = Field(None, description="生活方式指导")
+    doctor_notes: Optional[str] = Field(None, description="医生备注")
+    next_plan: Optional[str] = Field(None, description="下一步计划")
+
+
+class FollowupRecordCreate(FollowupRecordBase):
+    """随访记录创建 Schema"""
+    pass
+
+
+class FollowupRecordResponse(FollowupRecordBase):
+    """随访记录响应Schema"""
+    id: int
+    followup_plan_id: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class ChronicDiseaseBase(BaseModel):
+    """慢性病基础Schema"""
+    disease_name: str = Field(..., max_length=100, description="疾病名称")
+    icd10_code: Optional[str] = Field(None, max_length=20, description="ICD-10编码")
+    diagnosis_date: Optional[date] = Field(None, description="诊断日期")
+    diagnosis_hospital: Optional[str] = Field(None, max_length=200, description="诊断医院")
+    diagnosis_doctor: Optional[str] = Field(None, max_length=50, description="诊断医生")
+    current_treatment: Optional[str] = Field(None, description="当前治疗方案")
+    control_status: ControlStatusEnum = Field(ControlStatusEnum.FAIR, description="控制状态")
+
+
+class ChronicDiseaseCreate(ChronicDiseaseBase):
+    """慢性病创建 Schema"""
+    pass
+
+
+class ChronicDiseaseUpdate(BaseModel):
+    """慢性病更新 Schema"""
+    disease_name: Optional[str] = Field(None, max_length=100)
+    icd10_code: Optional[str] = Field(None, max_length=20)
+    diagnosis_date: Optional[date] = None
+    diagnosis_hospital: Optional[str] = Field(None, max_length=200)
+    diagnosis_doctor: Optional[str] = Field(None, max_length=50)
+    current_treatment: Optional[str] = None
+    control_status: Optional[ControlStatusEnum] = None
+
+
+class ChronicDiseaseResponse(ChronicDiseaseBase):
+    """慢性病响应Schema"""
+    id: int
+    user_id: int
+    indicators: List[DiseaseIndicatorResponse] = []
+    followup_plans: List[FollowupPlanResponse] = []
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
 # 更新前向引用
 MedicationScheduleResponse.model_rebuild()
+
+
+# ============= 异常值预警相关 Schemas =============
+
+class AlertLevelEnum(str, Enum):
+    """预警级别枚举"""
+    YELLOW = "yellow"
+    ORANGE = "orange"
+    RED = "red"
+
+
+class IndicatorAlertBase(BaseModel):
+    """指标预警基础Schema"""
+    disease_id: int = Field(..., description="慢性病ID")
+    indicator_id: int = Field(..., description="指标ID")
+    record_id: int = Field(..., description="记录ID")
+    alert_level: AlertLevelEnum = Field(..., description="预警级别")
+    alert_message: str = Field(..., description="预警信息")
+    indicator_value: float = Field(..., description="指标数值")
+    normal_range: Optional[str] = Field(None, description="正常范围")
+    suggestion: Optional[str] = Field(None, description="建议措施")
+
+
+class IndicatorAlertCreate(IndicatorAlertBase):
+    """指标预警创建 Schema"""
+    pass
+
+
+class IndicatorAlertResponse(IndicatorAlertBase):
+    """指标预警响应Schema"""
+    id: int
+    user_id: int
+    is_read: bool = False
+    is_handled: bool = False
+    handled_at: Optional[datetime] = None
+    handler_notes: Optional[str] = None
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class AlertHandleRequest(BaseModel):
+    """预警处理请求Schema"""
+    handler_notes: Optional[str] = Field(None, description="处理备注")
+
+
+# ============= 用药依从性相关 Schemas =============
+
+class MedicationAdherenceBase(BaseModel):
+    """用药依从性基础Schema"""
+    disease_id: int = Field(..., description="慢性病ID")
+    user_medication_id: int = Field(..., description="用户药品ID")
+    period_start: date = Field(..., description="统计周期开始")
+    period_end: date = Field(..., description="统计周期结束")
+
+
+class MedicationAdherenceCreate(MedicationAdherenceBase):
+    """用药依从性创建 Schema"""
+    pass
+
+
+class MedicationAdherenceResponse(MedicationAdherenceBase):
+    """用药依从性响应Schema"""
+    id: int
+    user_id: int
+    total_doses: int
+    taken_doses: int
+    skipped_doses: int
+    delayed_doses: int
+    adherence_rate: float
+    control_status_before: Optional[ControlStatusEnum] = None
+    control_status_after: Optional[ControlStatusEnum] = None
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class AdherenceStatsResponse(BaseModel):
+    """依从性统计响应Schema"""
+    disease_id: int
+    disease_name: str
+    total_medications: int  # 总药品数
+    average_adherence_rate: float  # 平均依从率
+    recent_adherence: List[MedicationAdherenceResponse]  # 最近的依从性记录
+    control_status: ControlStatusEnum  # 当前控制状态

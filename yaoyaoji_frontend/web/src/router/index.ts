@@ -53,6 +53,26 @@ const router = createRouter({
           path: 'user-profile',
           name: 'userProfile',
           component: () => import('@/views/UserProfileView.vue')
+        },
+        {
+          path: 'chronic-disease',
+          name: 'chronicDisease',
+          component: () => import('@/views/ChronicDiseaseView.vue')
+        },
+        {
+          path: 'chronic-disease/:id',
+          name: 'chronicDiseaseDetail',
+          component: () => import('@/views/ChronicDiseaseDetailView.vue')
+        },
+        {
+          path: 'followup-schedule',
+          name: 'followupSchedule',
+          component: () => import('@/views/FollowupScheduleView.vue')
+        },
+        {
+          path: 'chronic-disease-stats',
+          name: 'chronicDiseaseStats',
+          component: () => import('@/views/ChronicDiseaseStatsView.vue')
         }
       ]
     }

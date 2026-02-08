@@ -16,7 +16,8 @@
           <span class="banner-title">即将服药提醒</span>
           <div class="banner-items">
             <span v-for="item in upcomingReminders" :key="item.key" class="reminder-tag">
-              {{ item.name }} {{ item.time.substring(0, 5) }}
+              <span>{{ item.name }} {{ item.time.substring(0, 5) }}</span>
+              <span v-if="item.notes" class="reminder-notes">💡 {{ item.notes }}</span>
             </span>
           </div>
         </div>
@@ -24,7 +25,7 @@
     </div>
 
     <div class="schedule-list">
-      <el-card v-for="row in schedules" :key="row.id" class="schedule-card" shadow="hover">
+      <el-card v-for="row in schedules" :key="row.id" class="schedule-card" shadow="hover" :class="{ 'replenish-reminder': needsReplenishReminder(row) }">
         <div class="schedule-card-content">
           <div class="schedule-info">
             <div class="medicine-name-row">
@@ -39,6 +40,9 @@
               <div class="detail-item">
                 <el-icon><Dish /></el-icon>
                 <span>{{ row.dose }}</span>
+              </div>
+              <div v-if="row.purchase_date && row.therapy_duration" class="detail-item" style="color: #e6a23c;">
+                <span>🛒 {{ row.purchase_date }} 购入，{{ row.therapy_duration }}天疗程</span>
               </div>
             </div>
           </div>
@@ -139,6 +143,24 @@
           </el-col>
         </el-row>
 
+        <el-row :gutter="20">
+          <el-col :span="8">
+            <el-form-item label="买入日期">
+              <el-date-picker v-model="form.purchase_date" type="date" placeholder="药品买入日期" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="疗程天数">
+              <el-input-number v-model="form.therapy_duration" :min="1" :max="365" placeholder="吃药天数" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="提前提醒天数">
+              <el-input-number v-model="form.remind_advance_days" :min="1" :max="30" placeholder="提前提醒备药" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
         <el-form-item label="备注">
           <el-input v-model="form.notes" type="textarea" :rows="2" placeholder="例如：饭后服用、忌辛辣等(可选)" />
         </el-form-item>
@@ -175,7 +197,7 @@ const upcomingReminders = computed(() => {
   const today = new Date(now)
   today.setHours(0, 0, 0, 0)
 
-  const result: Array<{ key: string; name: string; time: string }> = []
+  const result: Array<{ key: string; name: string; time: string; notes?: string }> = []
   schedules.value.forEach((s: any) => {
     const start = new Date(s.start_date)
     start.setHours(0, 0, 0, 0)
@@ -185,15 +207,38 @@ const upcomingReminders = computed(() => {
     if (!activeToday) return
 
     const name = s.user_medication?.custom_name || s.user_medication?.medicine?.name || '未知'
+    const medicationNotes = s.user_medication?.notes || ''
     if (Array.isArray(s.scheduled_times)) {
       s.scheduled_times.forEach((t: string, idx: number) => {
         const [h, m] = t.split(':').map(Number)
         const minutes = h * 60 + m
         const delta = minutes - currentMinutes
         if (delta >= 0 && delta <= 5) {
-          result.push({ key: `${s.id}-${idx}-${t}`, name, time: t })
+          result.push({ key: `${s.id}-${idx}-${t}`, name, time: t, notes: medicationNotes })
         }
       })
+    }
+    
+    // 添加备药提醒（疗程结束前 N 天）
+    if (s.purchase_date && s.therapy_duration && s.remind_advance_days) {
+      const purchaseDate = new Date(s.purchase_date)
+      const endOfTherapy = new Date(purchaseDate)
+      endOfTherapy.setDate(endOfTherapy.getDate() + s.therapy_duration)
+      const reminderDate = new Date(endOfTherapy)
+      reminderDate.setDate(reminderDate.getDate() - s.remind_advance_days)
+      reminderDate.setHours(0, 0, 0, 0)
+      
+      // 应用到每一次服药时间
+      if (reminderDate <= today && today < endOfTherapy) {
+        const firstTime = s.scheduled_times[0]
+        const [h, m] = firstTime.split(':').map(Number)
+        const minutes = h * 60 + m
+        const delta = minutes - currentMinutes
+        // 每天的第一次服药时间提醒备药
+        if (delta >= 0 && delta <= 5) {
+          result.push({ key: `${s.id}-reminder-${firstTime}`, name: `🚨备${name}`, time: firstTime, notes: medicationNotes })
+        }
+      }
     }
   })
   return result
@@ -220,7 +265,11 @@ function speakGentle(text: string, repeats = 3) {
 watch(upcomingReminders, (list) => {
   list.forEach(item => {
     if (!announcedKeys.has(item.key)) {
-      speakGentle(`主人，现在是北京时间 ${dayjs().format('HH:mm')}，该吃 ${item.name} 啦`, 3)
+      let speechText = `主人，现在是北京时间 ${dayjs().format('HH:mm')}，该吃 ${item.name} 啦`
+      if (item.notes) {
+        speechText += `。温馨提示：${item.notes}`
+      }
+      speakGentle(speechText, 3)
       announcedKeys.add(item.key)
       setTimeout(() => announcedKeys.delete(item.key), 5 * 60 * 1000)
     }
@@ -234,6 +283,9 @@ const form = reactive({
   dose: '',
   start_date: new Date(),
   end_date: null,
+  purchase_date: null,
+  therapy_duration: null,
+  remind_advance_days: 5,
   notes: ''
 })
 
@@ -292,6 +344,9 @@ async function handleSubmit() {
       dose: form.dose,
       start_date: dayjs(form.start_date).format('YYYY-MM-DD'),
       end_date: form.end_date ? dayjs(form.end_date).format('YYYY-MM-DD') : null,
+      purchase_date: form.purchase_date ? dayjs(form.purchase_date).format('YYYY-MM-DD') : null,
+      therapy_duration: form.therapy_duration || null,
+      remind_advance_days: form.remind_advance_days || 5,
       notes: form.notes || null
     }
 
@@ -320,6 +375,9 @@ function handleEdit(row: any) {
   form.dose = row.dose
   form.start_date = new Date(row.start_date)
   form.end_date = row.end_date ? new Date(row.end_date) : null
+  form.purchase_date = row.purchase_date ? new Date(row.purchase_date) : null
+  form.therapy_duration = row.therapy_duration || null
+  form.remind_advance_days = row.remind_advance_days || 5
   form.notes = row.notes || ''
   dialogVisible.value = true
 }
@@ -348,6 +406,9 @@ function resetForm() {
   form.dose = ''
   form.start_date = new Date()
   form.end_date = null
+  form.purchase_date = null
+  form.therapy_duration = null
+  form.remind_advance_days = 5
   form.notes = ''
 }
 
@@ -387,6 +448,25 @@ function getTimeStatus(timeStr: string): string {
   } else {
     return 'primary'
   }
+}
+
+// 检查是否需要备药提醒
+function needsReplenishReminder(schedule: any): boolean {
+  if (!schedule.purchase_date || !schedule.therapy_duration || !schedule.remind_advance_days) {
+    return false
+  }
+  
+  const purchaseDate = new Date(schedule.purchase_date)
+  const endOfTherapy = new Date(purchaseDate)
+  endOfTherapy.setDate(endOfTherapy.getDate() + schedule.therapy_duration)
+  const reminderDate = new Date(endOfTherapy)
+  reminderDate.setDate(reminderDate.getDate() - schedule.remind_advance_days)
+  reminderDate.setHours(0, 0, 0, 0)
+  
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  
+  return reminderDate <= today && today < endOfTherapy
 }
 </script>
 
@@ -481,12 +561,25 @@ function getTimeStatus(timeStr: string): string {
 }
 
 .reminder-tag {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   background-color: white;
-  padding: 2px 10px;
+  padding: 6px 10px;
   border-radius: 12px;
   font-size: 13px;
   color: #C2410C;
   font-weight: 500;
+}
+
+.reminder-notes {
+  display: block;
+  font-size: 12px;
+  color: #1F2937;
+  font-weight: 400;
+  padding-top: 2px;
+  border-top: 1px solid #E5E7EB;
+  margin-top: 2px;
 }
 
 /* Schedule List */
@@ -504,6 +597,12 @@ function getTimeStatus(timeStr: string): string {
 
 .schedule-card:hover {
   transform: translateX(4px);
+}
+
+/* 需要备药提醒的卡片 */
+.schedule-card.replenish-reminder {
+  border-left: 4px solid #e6a23c;
+  background-color: #fef9f0;
 }
 
 .schedule-card-content {

@@ -3,12 +3,48 @@
     <div class="welcome-section">
       <div class="welcome-text">
         <h1 class="welcome-title">
-          早安，{{ username }}
+          {{ greeting }}，{{ username }}
         </h1>
-        <p class="welcome-subtitle">祝您今天身体健康，心情愉快</p>
+        <p class="welcome-subtitle">祝您身体健康，爱自己，笑口常开！</p>
       </div>
-      <div class="welcome-decoration">
-        <!-- Abstract decoration or illustration placeholder -->
+      <div class="calendar-widget">
+        <div class="calendar-date">
+          <div class="calendar-day">{{ currentDay }}</div>
+          <div class="calendar-month-year">{{ currentMonthYear }}</div>
+        </div>
+        <div class="calendar-lunar">
+          <div class="lunar-date">{{ lunarDateStr }}</div>
+          <div class="lunar-festival" v-if="lunarFestival">{{ lunarFestival }}</div>
+        </div>
+      </div>
+      <div class="user-widget">
+        <div class="user-avatar-wrapper" @click="$router.push('/user-profile')">
+          <img v-if="userStore.user?.avatar" :src="getUserAvatarUrl(userStore.user.avatar)" class="user-avatar-img" />
+          <div v-else class="user-avatar-placeholder">
+            {{ userStore.user?.username?.charAt(0).toUpperCase() }}
+          </div>
+        </div>
+        <div class="user-info-text" @click="$router.push('/user-profile')">
+          <span class="user-name">{{ userStore.user?.username }}</span>
+        </div>
+        <el-dropdown @command="handleUserCommand" trigger="click">
+          <span class="user-role-dropdown">
+            <span class="user-role">家庭管理员</span>
+            <el-icon class="user-arrow"><ArrowDown /></el-icon>
+          </span>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="profile">
+                <el-icon><User /></el-icon>
+                个人设置
+              </el-dropdown-item>
+              <el-dropdown-item command="logout" divided>
+                <el-icon><SwitchButton /></el-icon>
+                退出登录
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
     </div>
 
@@ -182,9 +218,19 @@
                 <span class="unit">mmol/L</span>
               </div>
               <div class="mini-metric">
-                <span class="label">体温</span>
-                <span class="value">{{ healthProfile.temperature || '-' }}</span>
-                <span class="unit">℃</span>
+                <span class="label">年龄</span>
+                <span class="value">{{ age }}</span>
+                <span class="unit">岁</span>
+              </div>
+              <div class="mini-metric">
+                <span class="label">体重</span>
+                <span class="value">{{ healthProfile.weight || '-' }}</span>
+                <span class="unit">kg</span>
+              </div>
+              <div class="mini-metric">
+                <span class="label">血型</span>
+                <span class="value">{{ healthProfile.blood_type || '-' }}</span>
+                <span class="unit"></span>
               </div>
             </div>
 
@@ -200,6 +246,38 @@
                   round
                 >
                   {{ disease.trim() }}
+                </el-tag>
+              </div>
+            </div>
+
+            <div class="tags-section" v-if="allergies.length > 0">
+              <span class="section-label">过敏史</span>
+              <div class="tags-wrapper">
+                <el-tag 
+                  v-for="allergy in allergies"
+                  :key="allergy.id"
+                  size="small"
+                  type="danger"
+                  effect="light"
+                  round
+                >
+                  {{ allergy.allergen }}{{ allergy.reaction ? `(${allergy.reaction})` : '' }}
+                </el-tag>
+              </div>
+            </div>
+
+            <div class="tags-section" v-if="familyHistories.length > 0">
+              <span class="section-label">遗传病史</span>
+              <div class="tags-wrapper">
+                <el-tag 
+                  v-for="history in familyHistories"
+                  :key="history.id"
+                  size="small"
+                  type="info"
+                  effect="light"
+                  round
+                >
+                  {{ history.relative }}: {{ history.disease }}
                 </el-tag>
               </div>
             </div>
@@ -246,17 +324,20 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useMedicationStore } from '@/stores/medication'
 import { useUserStore } from '@/stores/user'
 import { scheduleAPI, symptomAPI, recordAPI, healthProfileAPI, familyAPI } from '@/api'
 import { 
   Box, AlarmClock, Calendar, Notebook, Timer, UserFilled, 
-  DataLine, Files, DocumentChecked, KnifeFork 
+  DataLine, Files, DocumentChecked, KnifeFork, ArrowDown, User, SwitchButton 
 } from '@element-plus/icons-vue'
+import { Lunar, Solar } from 'lunar-javascript'
 
 const medicationStore = useMedicationStore()
 const userStore = useUserStore()
+const router = useRouter()
 const todaySchedules = ref<any[]>([])
 const symptomCount = ref(0)
 const medicationScheduleDays = ref<Array<{ id: number; name: string; days: number }>>([])
@@ -269,7 +350,66 @@ const familyHistories = ref<any[]>([])
 const surgeries = ref<any[]>([])
 const checkups = ref<any[]>([])
 
+// 日历数据
+const now = new Date()
+const solar = Solar.fromDate(now)
+const lunar = solar.getLunar()
+
+const currentDay = computed(() => now.getDate())
+const currentMonthYear = computed(() => {
+  const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
+  return `${now.getFullYear()}年${months[now.getMonth()]}`
+})
+
+const lunarDateStr = computed(() => {
+  return `${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}`
+})
+
+const lunarFestival = computed(() => {
+  const festivals = lunar.getFestivals()
+  const jieQi = lunar.getJieQi()
+  if (festivals.length > 0) {
+    return festivals[0]
+  }
+  if (jieQi) {
+    return jieQi
+  }
+  return ''
+})
+
 const username = computed(() => userStore.user?.username || '用户')
+
+// 获取用户头像完整URL
+function getUserAvatarUrl(avatarPath: string) {
+  if (!avatarPath) return ''
+  if (avatarPath.startsWith('http')) return avatarPath
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+  return `${baseUrl}${avatarPath}`
+}
+
+// 用户下拉菜单命令
+function handleUserCommand(command: string) {
+  if (command === 'profile') {
+    router.push('/user-profile')
+  } else if (command === 'logout') {
+    userStore.logout()
+    router.push('/login')
+  }
+}
+
+// 根据时间显示不同的问候语
+const greeting = computed(() => {
+  const hour = new Date().getHours()
+  if (hour >= 5 && hour < 12) {
+    return '上午好'
+  } else if (hour >= 12 && hour < 18) {
+    return '中午好'
+  } else if (hour >= 18 && hour < 22) {
+    return '晚上好'
+  } else {
+    return '夜深了'
+  }
+})
 
 // 计算BMI
 const bmi = computed(() => {
@@ -277,6 +417,21 @@ const bmi = computed(() => {
     const h = healthProfile.value.height / 100
     const bmiValue = healthProfile.value.weight / (h * h)
     return bmiValue.toFixed(1)
+  }
+  return '-'
+})
+
+// 计算年龄
+const age = computed(() => {
+  if (healthProfile.value?.birth_date) {
+    const birthDate = new Date(healthProfile.value.birth_date)
+    const today = new Date()
+    let calculatedAge = today.getFullYear() - birthDate.getFullYear()
+    const monthDiff = today.getMonth() - birthDate.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      calculatedAge--
+    }
+    return calculatedAge
   }
   return '-'
 })
@@ -502,11 +657,16 @@ async function handleSwitchToMember(member: any) {
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
 }
 
 .welcome-text {
   position: relative;
   z-index: 2;
+  flex: 1;
 }
 
 .welcome-title {
@@ -518,6 +678,151 @@ async function handleSwitchToMember(member: any) {
 .welcome-subtitle {
   font-size: 16px;
   opacity: 0.9;
+}
+
+/* Calendar Widget */
+.calendar-widget {
+  position: relative;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-md);
+  padding: 20px 24px;
+  width: 160px;
+  height: 160px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.calendar-date {
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+}
+
+.calendar-day {
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.calendar-month-year {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.calendar-lunar {
+  text-align: center;
+}
+
+.lunar-date {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.lunar-festival {
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 8px;
+  border-radius: 10px;
+  display: inline-block;
+}
+
+/* User Widget */
+.user-widget {
+  position: relative;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-md);
+  padding: 20px 24px;
+  width: 160px;
+  height: 160px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.user-avatar-wrapper {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  cursor: pointer;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.user-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: 600;
+  color: white;
+}
+
+.user-widget .user-info-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.user-widget .user-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+}
+
+.user-role-dropdown {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 12px;
+  transition: background 0.2s ease;
+}
+
+.user-role-dropdown:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.user-widget .user-role {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.user-arrow {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  transition: transform 0.2s ease;
+}
+
+.user-role-dropdown:hover .user-arrow {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 /* Stats Grid */
@@ -641,21 +946,25 @@ async function handleSwitchToMember(member: any) {
 
 /* Schedule List */
 .schedule-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 16px;
 }
 
 .schedule-item {
   display: flex;
-  gap: 16px;
+  gap: 12px;
+  background-color: var(--color-bg-page);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
 }
 
 .schedule-time-line {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 20px;
+  width: 12px;
+  flex-shrink: 0;
 }
 
 .time-dot {
@@ -667,27 +976,21 @@ async function handleSwitchToMember(member: any) {
 }
 
 .time-line {
-  flex: 1;
-  width: 2px;
-  background-color: var(--color-border);
-  margin-top: 4px;
-}
-
-.schedule-item:last-child .time-line {
   display: none;
 }
 
 .schedule-content {
   flex: 1;
-  background-color: var(--color-bg-page);
-  border-radius: var(--radius-sm);
-  padding: 12px 16px;
+  min-width: 0;
 }
 
 .medicine-info h4 {
   margin: 0 0 4px 0;
   font-size: 15px;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .medicine-info p {
@@ -698,7 +1001,7 @@ async function handleSwitchToMember(member: any) {
 
 .time-tags {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
@@ -782,6 +1085,7 @@ async function handleSwitchToMember(member: any) {
 .metric-item .label {
   font-size: 14px;
   color: var(--color-text-secondary);
+  font-weight: 600;
 }
 
 .metric-item .value-row {
@@ -800,6 +1104,7 @@ async function handleSwitchToMember(member: any) {
   padding: 2px 8px;
   border-radius: 10px;
   background-color: var(--color-bg-page);
+  font-weight: 600;
 }
 
 .value.normal, .status-badge.normal { color: var(--color-success); }
@@ -809,7 +1114,7 @@ async function handleSwitchToMember(member: any) {
 
 .metric-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 16px;
 }
 
@@ -840,20 +1145,27 @@ async function handleSwitchToMember(member: any) {
 }
 
 .tags-section {
-  margin-top: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
 }
 
 .section-label {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text-secondary);
   display: block;
   margin-bottom: 8px;
+  font-weight: 600;
 }
 
 .tags-wrapper {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+:deep(.tags-section .el-tag) {
+  font-weight: 600;
 }
 
 /* Recent List */

@@ -1,0 +1,40 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Dependencies
+node_modules
+
+# Build output
+dist
+
+# 测试和文档
+tests/
+docs/
+*.md
+
+# 本地配置
+*.local
+.env.local
+.env.*.local
+
+# 日志
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 编辑器目录
+.idea
+.vscode
+
+# 临时文件
+tmp/
+temp/
+coverage/

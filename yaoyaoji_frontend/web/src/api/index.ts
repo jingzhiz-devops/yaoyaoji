@@ -28,6 +28,12 @@ export const authAPI = {
   changeUsername: (newUsername: string, password: string) =>
     service.patch('/users/change-username', null, {
       params: { new_username: newUsername, password: password }
+    }),
+  
+  // 修改头像
+  changeAvatar: (avatarUrl: string) =>
+    service.patch('/users/change-avatar', null, {
+      params: { avatar_url: avatarUrl }
     })
 }
 
@@ -226,7 +232,22 @@ export const uploadAPI = {
   
   // 删除药品包装图
   deleteMedicineImage: (filename: string) => 
-    service.delete(`/upload/medicine-image/${filename}`)
+    service.delete(`/upload/medicine-image/${filename}`),
+  
+  // 上传用户头像
+  uploadAvatar: (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return service.post('/upload/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+  },
+  
+  // 删除用户头像
+  deleteAvatar: (filename: string) => 
+    service.delete(`/upload/avatar/${filename}`)
 }
 
 // AI医生相关

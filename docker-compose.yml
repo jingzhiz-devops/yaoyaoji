@@ -1,0 +1,99 @@
+# ============================================
+# 药药记 Docker Compose 配置
+# 用于本地开发和测试
+# ============================================
+
+services:
+  # MySQL 数据库
+  mysql:
+    image: mysql:8.0
+    container_name: yaoyaoji-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD:-yaoyaoji123}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-yaoyaoji}
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_PASSWORD:-yaoyaoji123}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - yaoyaoji-network
+
+  # 后端 API 服务
+  backend:
+    build:
+      context: ./yaoyaoji_backup
+      dockerfile: Dockerfile
+    container_name: yaoyaoji-backend
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=mysql+pymysql://root:${MYSQL_PASSWORD:-yaoyaoji123}@mysql:3306/${MYSQL_DATABASE:-yaoyaoji}
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-yaoyaoji123}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-yaoyaoji}
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=1440
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-sk-your-api-key}
+      - DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      - APP_NAME=药药记 API
+      - APP_VERSION=1.0.0
+      - DEBUG=${DEBUG:-false}
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend_uploads:/app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - yaoyaoji-network
+
+  # 前端 Web 服务
+  frontend:
+    build:
+      context: ./yaoyaoji_frontend/web
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE_URL=/api
+    container_name: yaoyaoji-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - yaoyaoji-network
+
+volumes:
+  mysql_data:
+    driver: local
+  backend_uploads:
+    driver: local
+
+networks:
+  yaoyaoji-network:
+    driver: bridge
