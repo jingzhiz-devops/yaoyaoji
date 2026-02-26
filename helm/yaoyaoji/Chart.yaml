@@ -1,0 +1,15 @@
+apiVersion: v2
+name: yaoyaoji
+description: 药药记 - 智能用药安全管理系统 Helm Chart
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - yaoyaoji
+  - health
+  - medication
+  - management
+home: https://github.com/your-org/yaoyaoji
+maintainers:
+  - name: YaoYaoJi Team
+    email: team@yaoyaoji.com

@@ -1,0 +1,45 @@
+# Production environment overrides
+# Use with: helm install yaoyaoji ./helm/yaoyaoji -f ./helm/yaoyaoji/values-prod.yaml
+
+global:
+  environment: production
+
+# MySQL - Production-grade resources
+mysql:
+  storage:
+    size: 20Gi
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+
+# Backend - Multiple replicas for high availability
+backend:
+  replicaCount: 3
+  storage:
+    size: 10Gi
+
+# Frontend - Multiple replicas for load balancing
+frontend:
+  replicaCount: 2
+
+# Ingress - Production domain with TLS
+ingress:
+  host: yaoyaoji.example.com
+  tls:
+    enabled: true
+    secretName: yaoyaoji-tls
+
+# Application Configuration
+config:
+  debug: "false"
+
+# Secrets - MUST be overridden with actual values
+# Use --set flags or external secret management
+# secrets:
+#   mysqlPassword: <actual-password>
+#   secretKey: <actual-secret-key>
+#   deepseekApiKey: <actual-api-key>

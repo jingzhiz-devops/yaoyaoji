@@ -1,0 +1,49 @@
+# Development environment overrides
+# Use with: helm install yaoyaoji ./helm/yaoyaoji -f ./helm/yaoyaoji/values-dev.yaml
+
+global:
+  environment: development
+
+# MySQL - Reduced resources for development
+mysql:
+  storage:
+    size: 5Gi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+# Backend - Single replica for development
+backend:
+  replicaCount: 1
+  storage:
+    size: 2Gi
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Frontend - Single replica for development
+frontend:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# Ingress - Development domain
+ingress:
+  host: yaoyaoji.local
+
+# Application Configuration
+config:
+  debug: "true"
