@@ -15,7 +15,11 @@ from app.models.models import (
     Disease, Family, FamilyMember, EmergencyContact,
     HealthProfile, AllergyRecord, FamilyHistory, SurgeryRecord,
     CheckupReport, VaccinationRecord,
-    ChatSession, ChatMessage, KnowledgeBase
+    ChatSession, ChatMessage, KnowledgeBase,
+    ChronicDisease, DiseaseIndicator, IndicatorRecord,
+    FollowupPlan, FollowupRecord, IndicatorAlert, MedicationAdherence,
+    DiseaseTemplate, DietRecommendation, ComplicationRecord,
+    ExerciseRecommendation, MedicationReminder
 )
 
 

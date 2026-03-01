@@ -407,16 +407,17 @@ class ChronicDisease(Base):
     # 治疗信息
     current_treatment = Column(Text, nullable=True)  # 当前治疗方案
     control_status = Column(Enum(ControlStatus), default=ControlStatus.FAIR)  # 控制状态
+    is_pinned = Column(Boolean, default=False)  # 是否收藏/置顶
     
     # 时间戳
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     
-    # 关系
+    # 关系（级联删除）
     user = relationship("User", foreign_keys=[user_id])
-    indicators = relationship("DiseaseIndicator", back_populates="disease")
-    indicator_records = relationship("IndicatorRecord", back_populates="disease")
-    followup_plans = relationship("FollowupPlan", back_populates="disease")
+    indicators = relationship("DiseaseIndicator", back_populates="disease", cascade="all, delete-orphan")
+    indicator_records = relationship("IndicatorRecord", back_populates="disease", cascade="all, delete-orphan")
+    followup_plans = relationship("FollowupPlan", back_populates="disease", cascade="all, delete-orphan")
 
 
 class DiseaseIndicator(Base):
@@ -436,7 +437,7 @@ class DiseaseIndicator(Base):
     
     # 关系
     disease = relationship("ChronicDisease", back_populates="indicators")
-    records = relationship("IndicatorRecord", back_populates="indicator")
+    records = relationship("IndicatorRecord", back_populates="indicator", cascade="all, delete-orphan")
 
 
 class IndicatorRecord(Base):
@@ -484,7 +485,7 @@ class FollowupPlan(Base):
     
     # 关系
     disease = relationship("ChronicDisease", back_populates="followup_plans")
-    records = relationship("FollowupRecord", back_populates="plan")
+    records = relationship("FollowupRecord", back_populates="plan", cascade="all, delete-orphan")
 
 
 class FollowupRecord(Base):
@@ -576,3 +577,119 @@ class MedicationAdherence(Base):
     user = relationship("User", foreign_keys=[user_id])
     disease = relationship("ChronicDisease", foreign_keys=[disease_id])
     user_medication = relationship("UserMedication", foreign_keys=[user_medication_id])
+
+
+# ============= 慢性病管理扩展模块 =============
+
+class DiseaseTemplate(Base):
+    """疾病类型模板表"""
+    __tablename__ = "disease_templates"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    disease_type = Column(String(50), unique=True, nullable=False)  # hypertension/hyperlipidemia/diabetes
+    display_name = Column(String(100), nullable=False)
+    icd10_code = Column(String(20), nullable=True)
+    description = Column(Text, nullable=True)
+    default_indicators = Column(JSON, nullable=False)
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class MealType(str, enum.Enum):
+    """餐次类型"""
+    BREAKFAST = "breakfast"
+    LUNCH = "lunch"
+    DINNER = "dinner"
+    SNACK = "snack"
+
+
+class DietRecommendation(Base):
+    """饮食建议表"""
+    __tablename__ = "diet_recommendations"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    disease_type = Column(String(50), nullable=False)
+    meal_type = Column(Enum(MealType), nullable=True)
+    title = Column(String(200), nullable=False)
+    content = Column(Text, nullable=False)
+    food_suggestions = Column(JSON, nullable=True)
+    food_restrictions = Column(JSON, nullable=True)
+    applicable_conditions = Column(JSON, nullable=True)
+    priority = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class ComplicationSeverity(str, enum.Enum):
+    """并发症严重程度"""
+    MILD = "mild"
+    MODERATE = "moderate"
+    SEVERE = "severe"
+
+
+class ComplicationRecord(Base):
+    """并发症记录表"""
+    __tablename__ = "complication_records"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    disease_id = Column(Integer, ForeignKey("chronic_diseases.id"), nullable=False)
+    complication_type = Column(String(100), nullable=False)
+    severity = Column(Enum(ComplicationSeverity), nullable=False)
+    discovered_date = Column(Date, nullable=False)
+    symptoms = Column(Text, nullable=True)
+    treatment = Column(Text, nullable=True)
+    is_resolved = Column(Boolean, default=False)
+    resolved_date = Column(Date, nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+    disease = relationship("ChronicDisease", foreign_keys=[disease_id])
+
+
+class ExerciseRecommendation(Base):
+    """运动建议表"""
+    __tablename__ = "exercise_recommendations"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    disease_type = Column(String(50), nullable=False)
+    title = Column(String(200), nullable=False)
+    exercise_type = Column(String(100), nullable=False)
+    duration_minutes = Column(Integer, nullable=True)
+    frequency_per_week = Column(Integer, nullable=True)
+    intensity = Column(String(50), nullable=True)
+    description = Column(Text, nullable=False)
+    precautions = Column(Text, nullable=True)
+    applicable_conditions = Column(JSON, nullable=True)
+    priority = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class ReminderStatus(str, enum.Enum):
+    """提醒状态"""
+    ACTIVE = "active"
+    PAUSED = "paused"
+    COMPLETED = "completed"
+
+
+class MedicationReminder(Base):
+    """用药提醒表"""
+    __tablename__ = "medication_reminders"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    disease_id = Column(Integer, ForeignKey("chronic_diseases.id"), nullable=False)
+    user_medication_id = Column(Integer, ForeignKey("user_medications.id"), nullable=True)
+    reminder_time = Column(Time, nullable=False)
+    reminder_days = Column(JSON, nullable=False)
+    status = Column(Enum(ReminderStatus), default=ReminderStatus.ACTIVE)
+    advance_minutes = Column(Integer, default=0)
+    repeat_interval_minutes = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+    user = relationship("User", foreign_keys=[user_id])
+    disease = relationship("ChronicDisease", foreign_keys=[disease_id])
+    medication = relationship("UserMedication", foreign_keys=[user_medication_id])
+

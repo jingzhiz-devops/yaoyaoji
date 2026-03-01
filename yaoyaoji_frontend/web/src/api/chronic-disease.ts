@@ -32,6 +32,10 @@ export const chronicDiseaseAPI = {
   delete: (diseaseId: number) =>
     service.delete(`/chronic-diseases/${diseaseId}`),
 
+  // 收藏/取消收藏
+  togglePin: (diseaseId: number) =>
+    service.put(`/chronic-diseases/${diseaseId}/pin`),
+
   // 关键指标管理
   indicators: {
     // 获取指标列表
@@ -101,20 +105,118 @@ export const chronicDiseaseAPI = {
     // 获取预警统计
     stats: () =>
       service.get('/chronic-diseases/alerts/stats')
-  },
-
-  // 用药依从性
-  adherence: {
-    // 计算依从性
-    calculate: (diseaseId: number, params?: { period_days?: number }) =>
-      service.post(`/chronic-diseases/${diseaseId}/adherence/calculate`, null, { params }),
-    
-    // 获取依从性记录
-    list: (diseaseId: number) =>
-      service.get(`/chronic-diseases/${diseaseId}/adherence`),
-    
-    // 获取依从性统计
-    stats: (diseaseId: number) =>
-      service.get(`/chronic-diseases/${diseaseId}/adherence/stats`)
   }
+}
+
+
+// ============= 慢性病管理扩展 API =============
+
+// 疾病模板
+export const diseaseTemplateAPI = {
+  list: () => service.get('/disease-templates'),
+}
+
+// 基于模板创建
+export const createFromTemplate = (data: {
+  disease_type: string
+  diagnosis_date?: string
+  diagnosis_hospital?: string
+  diagnosis_doctor?: string
+  current_treatment?: string
+}) => service.post('/chronic-diseases/from-template', data)
+
+// 批量指标记录
+export const batchRecordIndicators = (diseaseId: number, records: Array<{
+  indicator_id: number
+  value: number
+  measurement_date: string
+  recorded_by?: string
+  notes?: string
+}>) => service.post(`/chronic-diseases/${diseaseId}/indicators/batch-record`, { records })
+
+// 饮食建议
+export const dietAPI = {
+  list: (params?: { disease_type?: string; meal_type?: string }) =>
+    service.get('/diet-recommendations', { params }),
+  personalized: (diseaseId: number) =>
+    service.get(`/chronic-diseases/${diseaseId}/personalized-diet`),
+}
+
+// 并发症管理
+export const complicationAPI = {
+  create: (diseaseId: number, data: {
+    complication_type: string
+    severity: string
+    discovered_date: string
+    symptoms?: string
+    treatment?: string
+    notes?: string
+  }) => service.post(`/chronic-diseases/${diseaseId}/complications`, data),
+  
+  list: (diseaseId: number, params?: { severity?: string; is_resolved?: boolean }) =>
+    service.get(`/chronic-diseases/${diseaseId}/complications`, { params }),
+  
+  update: (complicationId: number, data: {
+    severity?: string
+    is_resolved?: boolean
+    resolved_date?: string
+    notes?: string
+  }) => service.put(`/complications/${complicationId}`, data),
+}
+
+// 运动建议
+export const exerciseAPI = {
+  list: (params?: { disease_type?: string }) =>
+    service.get('/exercise-recommendations', { params }),
+  personalized: (diseaseId: number) =>
+    service.get(`/chronic-diseases/${diseaseId}/personalized-exercise`),
+}
+
+// 用药提醒
+export const medicationReminderAPI = {
+  create: (data: {
+    disease_id: number
+    user_medication_id?: number
+    reminder_time: string
+    reminder_days: number[]
+    advance_minutes?: number
+  }) => service.post('/medication-reminders', data),
+  
+  list: (params?: { disease_id?: number; status?: string }) =>
+    service.get('/medication-reminders', { params }),
+  
+  update: (reminderId: number, data: {
+    status?: string
+    reminder_time?: string
+    reminder_days?: number[]
+  }) => service.put(`/medication-reminders/${reminderId}`, data),
+
+  delete: (reminderId: number) =>
+    service.delete(`/medication-reminders/${reminderId}`),
+}
+
+// 高级搜索
+export const advancedSearch = (params: {
+  search?: string
+  disease_type?: string
+  control_status?: string
+  start_date?: string
+  end_date?: string
+}) => service.get('/chronic-diseases/search/advanced', { params })
+
+// 数据导出
+export const exportAPI = {
+  create: (data: {
+    disease_ids: number[]
+    format: string
+    start_date?: string
+    end_date?: string
+    include_indicators?: boolean
+    include_medications?: boolean
+    include_complications?: boolean
+  }) => service.post('/chronic-diseases/export', data),
+  
+  getTask: (taskId: string) => service.get(`/export-tasks/${taskId}`),
+  
+  download: (filename: string) => service.get(`/downloads/${filename}`, { responseType: 'blob' }),
 }

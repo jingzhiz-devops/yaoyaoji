@@ -92,6 +92,7 @@ export interface ChronicDisease {
   diagnosis_doctor?: string
   current_treatment?: string
   control_status: 'good' | 'fair' | 'poor'
+  is_pinned: boolean
   indicators?: DiseaseIndicator[]
   followup_plans?: FollowupPlan[]
   created_at: string
@@ -144,5 +145,119 @@ export interface FollowupRecord {
   lifestyle_guidance?: string
   doctor_notes?: string
   next_plan?: string
+  created_at: string
+}
+
+
+// ============= 慢性病管理扩展类型 =============
+
+export interface DiseaseTemplate {
+  id: number
+  disease_type: string
+  display_name: string
+  icd10_code?: string
+  description?: string
+  default_indicators: Array<{
+    name: string
+    unit: string
+    normal_min?: number
+    normal_max?: number
+    check_frequency?: string
+  }>
+  created_at: string
+}
+
+export interface DietRecommendation {
+  id: number
+  disease_type: string
+  meal_type?: 'breakfast' | 'lunch' | 'dinner' | 'snack'
+  title: string
+  content: string
+  food_suggestions?: string[]
+  food_restrictions?: string[]
+  applicable_conditions?: Record<string, any>
+  priority: number
+  created_at: string
+}
+
+export interface PersonalizedDiet {
+  disease_type: string
+  breakfast?: DietRecommendation[]
+  lunch?: DietRecommendation[]
+  dinner?: DietRecommendation[]
+  general_tips: DietRecommendation[]
+}
+
+export interface ComplicationRecord {
+  id: number
+  disease_id: number
+  complication_type: string
+  severity: 'mild' | 'moderate' | 'severe'
+  discovered_date: string
+  symptoms?: string
+  treatment?: string
+  is_resolved: boolean
+  resolved_date?: string
+  notes?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ExerciseRecommendation {
+  id: number
+  disease_type: string
+  title: string
+  exercise_type: string
+  duration_minutes?: number
+  frequency_per_week?: number
+  intensity?: string
+  description: string
+  precautions?: string
+  created_at: string
+}
+
+export interface PersonalizedExercise {
+  disease_type: string
+  recommended_exercises: ExerciseRecommendation[]
+  current_status?: string
+  safety_tips: string[]
+}
+
+export interface MedicationReminder {
+  id: number
+  user_id: number
+  disease_id: number
+  user_medication_id: number
+  reminder_time: string
+  reminder_days: number[]
+  status: 'active' | 'paused' | 'completed'
+  advance_minutes: number
+  repeat_interval_minutes?: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ExportTask {
+  task_id: string
+  status: string
+  download_url?: string
+  expires_at?: string
+}
+
+export interface IndicatorAlert {
+  id: number
+  user_id: number
+  disease_id: number
+  indicator_id: number
+  record_id: number
+  alert_level: 'yellow' | 'orange' | 'red'
+  alert_message: string
+  indicator_value: number
+  normal_range?: string
+  suggestion?: string
+  is_read: boolean
+  is_handled: boolean
+  handled_at?: string
+  handler_notes?: string
   created_at: string
 }
