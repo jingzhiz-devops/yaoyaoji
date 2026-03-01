@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "yaoyaoji.fullname" . }}-backend
+  labels:
+    {{- include "yaoyaoji.backend.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: backend
+    {{- include "yaoyaoji.selectorLabels" . | nindent 4 }}

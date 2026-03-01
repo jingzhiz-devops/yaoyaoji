@@ -118,13 +118,29 @@
 
 ## 🚀 快速开始
 
+### 部署方式
+
+本项目支持两种部署方式：
+
+1. **Docker Compose**（推荐用于本地开发）
+2. **Kubernetes + Helm**（推荐用于生产环境）
+
 ### 环境要求
 
+#### 本地开发（Docker Compose）
 - **后端**：Python 3.10+、MySQL 8.0+
 - **前端**：Node.js 20.19+ 或 22.12+
-- **其他**：Git
+- **其他**：Docker、Docker Compose、Git
 
-### 安装步骤
+#### 生产部署（Kubernetes）
+- **容器编排**：Kubernetes 1.19+
+- **包管理**：Helm 3.0+
+- **本地测试**：kind（Kubernetes in Docker）
+- **其他**：Docker、kubectl
+
+### 安装步骤（Docker Compose - 本地开发）
+
+> **注意**: Docker Compose 配置仅用于本地开发和测试。生产环境请使用 Kubernetes 部署。
 
 #### 1. 克隆项目
 
@@ -208,6 +224,48 @@ npm run dev
 ```
 
 访问应用：http://localhost:5173
+
+---
+
+### Kubernetes 部署（生产环境）
+
+详细的 Kubernetes 部署指南请参考：[Kubernetes 部署文档](./KUBERNETES_DEPLOYMENT.md)
+
+#### 快速部署到 kind 集群
+
+```bash
+# 1. 创建 kind 集群并安装 Ingress Controller
+cat <<EOF | kind create cluster --config=-
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  extraPortMappings:
+  - containerPort: 80
+    hostPort: 80
+  - containerPort: 443
+    hostPort: 443
+EOF
+
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+
+# 2. 构建并加载镜像
+docker build -t yaoyaoji-backend:latest ./yaoyaoji_backup
+docker build -t yaoyaoji-frontend:latest ./yaoyaoji_frontend/web
+kind load docker-image yaoyaoji-backend:latest
+kind load docker-image yaoyaoji-frontend:latest
+
+# 3. 使用 Helm 部署
+helm install yaoyaoji ./helm/yaoyaoji -f ./helm/yaoyaoji/values-dev.yaml
+
+# 4. 添加 hosts 记录
+echo "127.0.0.1 yaoyaoji.local" | sudo tee -a /etc/hosts
+
+# 5. 访问应用
+open http://yaoyaoji.local
+```
+
+更多配置选项和故障排查，请查看 [Helm Chart 文档](./helm/yaoyaoji/README.md)。
 
 ---
 
@@ -334,6 +392,8 @@ yaoyaoji/
 
 - [后端功能文档](./docs/BACKEND.md) - 详细的后端 API 说明
 - [前端功能文档](./docs/FRONTEND.md) - 详细的前端页面与交互说明
+- [Kubernetes 部署指南](./KUBERNETES_DEPLOYMENT.md) - K8s 集群部署完整指南
+- [Helm Chart 文档](./helm/yaoyaoji/README.md) - Helm Chart 配置和使用说明
 - [数据库设计](./docs/DATABASE.md) - 数据表结构与关系
 - [开发规范](./docs/DEVELOPMENT.md) - 代码规范与最佳实践
 

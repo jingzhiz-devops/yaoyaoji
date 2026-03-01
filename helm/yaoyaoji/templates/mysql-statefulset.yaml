@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "yaoyaoji.fullname" . }}-mysql
+  labels:
+    {{- include "yaoyaoji.mysql.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "yaoyaoji.fullname" . }}-mysql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+      {{- include "yaoyaoji.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app: mysql
+        {{- include "yaoyaoji.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+      - name: mysql
+        image: {{ .Values.mysql.image }}
+        imagePullPolicy: {{ .Values.mysql.imagePullPolicy }}
+        ports:
+        - containerPort: 3306
+          name: mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "yaoyaoji.fullname" . }}-secret
+              key: MYSQL_PASSWORD
+        - name: MYSQL_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "yaoyaoji.fullname" . }}-config
+              key: MYSQL_DATABASE
+        - name: MYSQL_CHARACTER_SET_SERVER
+          value: "utf8mb4"
+        - name: MYSQL_COLLATION_SERVER
+          value: "utf8mb4_unicode_ci"
+        volumeMounts:
+        - name: mysql-data
+          mountPath: /var/lib/mysql
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "mysqladmin ping -h localhost -u root -p$MYSQL_ROOT_PASSWORD"
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "mysqladmin ping -h localhost -u root -p$MYSQL_ROOT_PASSWORD"
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+        resources:
+          {{- toYaml .Values.mysql.resources | nindent 10 }}
+  volumeClaimTemplates:
+  - metadata:
+      name: mysql-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: {{ .Values.mysql.storage.storageClass }}
+      resources:
+        requests:
+          storage: {{ .Values.mysql.storage.size }}

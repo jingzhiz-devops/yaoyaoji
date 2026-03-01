@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "yaoyaoji.fullname" . }}-backend-uploads
+  labels:
+    {{- include "yaoyaoji.backend.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.backend.storage.accessMode }}
+  storageClassName: {{ .Values.backend.storage.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.backend.storage.size }}

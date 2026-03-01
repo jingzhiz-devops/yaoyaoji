@@ -1,0 +1,62 @@
+Thank you for installing {{ .Chart.Name }}!
+
+Your release is named {{ .Release.Name }}.
+
+To learn more about the release, try:
+
+  $ helm status {{ .Release.Name }}
+  $ helm get all {{ .Release.Name }}
+
+===========================================
+药药记 - 智能用药安全管理系统
+===========================================
+
+1. Check the deployment status:
+
+   kubectl get pods -l "app.kubernetes.io/instance={{ .Release.Name }}"
+   kubectl get services -l "app.kubernetes.io/instance={{ .Release.Name }}"
+
+2. Wait for all pods to be ready:
+
+   kubectl wait --for=condition=ready pod -l "app.kubernetes.io/instance={{ .Release.Name }}" --timeout=300s
+
+3. Access the application:
+
+{{- if .Values.ingress.enabled }}
+   The application is available at:
+   
+   http://{{ .Values.ingress.host }}
+   
+   Make sure to add the following to your /etc/hosts file (for local development):
+   
+   127.0.0.1 {{ .Values.ingress.host }}
+{{- else }}
+   Ingress is disabled. To access the application, use port-forward:
+   
+   kubectl port-forward svc/{{ include "yaoyaoji.fullname" . }}-frontend 8080:80
+   
+   Then visit: http://localhost:8080
+{{- end }}
+
+4. View logs:
+
+   # Backend logs
+   kubectl logs -l app=backend --tail=100 -f
+   
+   # Frontend logs
+   kubectl logs -l app=frontend --tail=100 -f
+   
+   # MySQL logs
+   kubectl logs -l app=mysql --tail=100 -f
+
+5. Check API health:
+
+   curl http://{{ .Values.ingress.host }}/api/health
+
+6. Access API documentation:
+
+   http://{{ .Values.ingress.host }}/api/docs
+
+===========================================
+For more information, see the README.md
+===========================================

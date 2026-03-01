@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "yaoyaoji.fullname" . }}-backend
+  labels:
+    {{- include "yaoyaoji.backend.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.backend.replicaCount }}
+  selector:
+    matchLabels:
+      app: backend
+      {{- include "yaoyaoji.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app: backend
+        {{- include "yaoyaoji.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+      - name: backend
+        image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+        imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+        ports:
+        - containerPort: 8000
+          name: http
+        envFrom:
+        - configMapRef:
+            name: {{ include "yaoyaoji.fullname" . }}-config
+        - secretRef:
+            name: {{ include "yaoyaoji.fullname" . }}-secret
+        env:
+        - name: DATABASE_URL
+          value: "mysql+pymysql://root:$(MYSQL_PASSWORD)@$(MYSQL_HOST):$(MYSQL_PORT)/$(MYSQL_DATABASE)"
+        volumeMounts:
+        - name: uploads
+          mountPath: /app/uploads
+        livenessProbe:
+          {{- toYaml .Values.backend.livenessProbe | nindent 10 }}
+        readinessProbe:
+          {{- toYaml .Values.backend.readinessProbe | nindent 10 }}
+        resources:
+          {{- toYaml .Values.backend.resources | nindent 10 }}
+      volumes:
+      - name: uploads
+        persistentVolumeClaim:
+          claimName: {{ include "yaoyaoji.fullname" . }}-backend-uploads
