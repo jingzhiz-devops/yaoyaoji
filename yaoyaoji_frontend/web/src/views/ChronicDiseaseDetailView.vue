@@ -38,7 +38,7 @@
                 <el-table-column label="测量日期" min-width="140">
                   <template #default="{ row }">{{ formatDateTime(row.measurement_date) }}</template>
                 </el-table-column>
-                <el-table-column prop="notes" label="备注" min-width="80" show-overflow-tooltip />
+                <el-table-column prop="notes" label="备注" min-width="80" show-overflow-tooltip></el-table-column>
               </el-table>
               <el-empty v-else description="暂无记录" :image-size="80" />
 
