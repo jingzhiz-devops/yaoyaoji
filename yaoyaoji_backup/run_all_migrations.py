@@ -13,7 +13,9 @@ from app.config import settings
 from app.database import engine, Base
 from app.models.models import (
     ChronicDisease, DiseaseIndicator, IndicatorRecord, 
-    FollowupPlan, FollowupRecord, IndicatorAlert, MedicationAdherence
+    FollowupPlan, FollowupRecord, IndicatorAlert, MedicationAdherence,
+    DiseaseTemplate, DietRecommendation, ComplicationRecord,
+    ExerciseRecommendation, MedicationReminder
 )
 
 
@@ -124,7 +126,7 @@ def run_all_migrations():
                 print(f"  ✅ {table_name} 表已存在")
         
         # 5. 创建预警和依从性表
-        print("\n📋 [5/5] 检查预警和依从性追踪表...")
+        print("\n📋 [5/7] 检查预警和依从性追踪表...")
         alert_tables = {
             'indicator_alerts': IndicatorAlert,
             'medication_adherence': MedicationAdherence
@@ -143,6 +145,65 @@ def run_all_migrations():
                         print(f"  ⚠️ {table_name} 表创建失败: {e}")
             else:
                 print(f"  ✅ {table_name} 表已存在")
+        
+        # 6. 创建慢性病扩展模块表（模板、饮食、运动、并发症、用药提醒）
+        print("\n📋 [6/7] 检查慢性病扩展模块表...")
+        extension_tables = {
+            'disease_templates': DiseaseTemplate,
+            'diet_recommendations': DietRecommendation,
+            'exercise_recommendations': ExerciseRecommendation,
+            'complication_records': ComplicationRecord,
+            'medication_reminders': MedicationReminder
+        }
+        
+        for table_name, model in extension_tables.items():
+            if table_name not in existing_tables:
+                print(f"  ➕ 正在创建 {table_name} 表...")
+                try:
+                    model.__table__.create(engine)
+                    print(f"  ✅ {table_name} 表创建成功")
+                except Exception as e:
+                    if 'already exists' in str(e).lower():
+                        print(f"  ✅ {table_name} 表已存在")
+                    else:
+                        print(f"  ⚠️ {table_name} 表创建失败: {e}")
+            else:
+                print(f"  ✅ {table_name} 表已存在")
+        
+        # 7. 修复 medication_reminders 表的 user_medication_id 为可空
+        print("\n📋 [7/8] 检查 medication_reminders 字段约束...")
+        if 'medication_reminders' in inspector.get_table_names():
+            columns = {col['name']: col for col in inspector.get_columns('medication_reminders')}
+            if 'user_medication_id' in columns and not columns['user_medication_id'].get('nullable', True):
+                print("  ➕ 修改 user_medication_id 为可空...")
+                with engine.connect() as conn:
+                    try:
+                        conn.execute(text("ALTER TABLE medication_reminders MODIFY COLUMN user_medication_id INTEGER NULL"))
+                        conn.commit()
+                        print("  ✅ user_medication_id 已改为可空")
+                    except Exception as e:
+                        print(f"  ⚠️ 修改失败: {e}")
+            else:
+                print("  ✅ user_medication_id 已是可空")
+        
+        # 8. 给 chronic_diseases 表添加 is_pinned 字段
+        print("\n📋 [8/8] 检查 chronic_diseases 表 is_pinned 字段...")
+        if 'chronic_diseases' in inspector.get_table_names():
+            columns = [col['name'] for col in inspector.get_columns('chronic_diseases')]
+            if 'is_pinned' not in columns:
+                print("  ➕ 正在添加 is_pinned 列...")
+                with engine.connect() as conn:
+                    try:
+                        conn.execute(text("ALTER TABLE chronic_diseases ADD COLUMN is_pinned BOOLEAN DEFAULT FALSE"))
+                        conn.commit()
+                        print("  ✅ is_pinned 列添加成功")
+                    except Exception as e:
+                        if 'Duplicate column' in str(e):
+                            print("  ✅ is_pinned 列已存在")
+                        else:
+                            print(f"  ⚠️ is_pinned 列添加失败: {e}")
+            else:
+                print("  ✅ is_pinned 列已存在")
         
         print("\n" + "=" * 60)
         print("✨ 数据库迁移完成！")

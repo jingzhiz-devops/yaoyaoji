@@ -17,7 +17,7 @@ from app.routers.health_profile import router as health_profile_router
 from app.routers.family import router as family_router
 from app.routers.upload import router as upload_router
 from app.routers.ai_doctor import router as ai_doctor_router
-from app.routers.chronic_disease import router as chronic_disease_router
+from app.routers.chronic_disease import router as chronic_disease_router, template_router as chronic_disease_template_router
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -48,6 +48,7 @@ app.include_router(family_router)  # 家庭管理
 app.include_router(upload_router)  # 文件上传
 app.include_router(ai_doctor_router)  # AI医生
 app.include_router(chronic_disease_router)  # 慢性病管理
+app.include_router(chronic_disease_template_router)  # 慢性病管理-扩展
 
 # 配置静态文件服务（用于访问上传的图片）
 UPLOAD_DIR = Path("uploads")

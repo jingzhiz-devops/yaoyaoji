@@ -2,7 +2,7 @@
 Pydantic Schemas - 数据验证和序列化
 """
 from pydantic import BaseModel, EmailStr, Field, validator
-from typing import Optional, List
+from typing import Optional, List, Any
 from datetime import datetime, date, time
 from enum import Enum
 
@@ -620,6 +620,7 @@ class ChronicDiseaseResponse(ChronicDiseaseBase):
     """慢性病响应Schema"""
     id: int
     user_id: int
+    is_pinned: bool = False
     indicators: List[DiseaseIndicatorResponse] = []
     followup_plans: List[FollowupPlanResponse] = []
     created_at: datetime
@@ -719,3 +720,223 @@ class AdherenceStatsResponse(BaseModel):
     average_adherence_rate: float  # 平均依从率
     recent_adherence: List[MedicationAdherenceResponse]  # 最近的依从性记录
     control_status: ControlStatusEnum  # 当前控制状态
+
+
+# ============= 慢性病管理扩展 Schemas =============
+
+class MealTypeEnum(str, Enum):
+    """餐次类型枚举"""
+    BREAKFAST = "breakfast"
+    LUNCH = "lunch"
+    DINNER = "dinner"
+    SNACK = "snack"
+
+
+class ComplicationSeverityEnum(str, Enum):
+    """并发症严重程度枚举"""
+    MILD = "mild"
+    MODERATE = "moderate"
+    SEVERE = "severe"
+
+
+class ReminderStatusEnum(str, Enum):
+    """提醒状态枚举"""
+    ACTIVE = "active"
+    PAUSED = "paused"
+    COMPLETED = "completed"
+
+
+# 疾病模板
+class DiseaseTemplateResponse(BaseModel):
+    """疾病模板响应"""
+    id: int
+    disease_type: str
+    display_name: str
+    icd10_code: Optional[str] = None
+    description: Optional[str] = None
+    default_indicators: list
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class CreateFromTemplateRequest(BaseModel):
+    """基于模板创建慢性病请求"""
+    disease_type: str = Field(..., description="疾病类型: hypertension/hyperlipidemia/diabetes")
+    diagnosis_date: Optional[date] = None
+    diagnosis_hospital: Optional[str] = Field(None, max_length=200)
+    diagnosis_doctor: Optional[str] = Field(None, max_length=50)
+    current_treatment: Optional[str] = None
+
+
+# 批量指标记录
+class BatchIndicatorRecordItem(BaseModel):
+    """批量指标记录项"""
+    indicator_id: int
+    value: float
+    measurement_date: datetime
+    recorded_by: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class BatchIndicatorRecordRequest(BaseModel):
+    """批量指标记录请求"""
+    records: List[BatchIndicatorRecordItem]
+
+
+class BatchIndicatorRecordResponse(BaseModel):
+    """批量指标记录响应"""
+    saved_records: List[IndicatorRecordResponse]
+    alerts: List[IndicatorAlertResponse]
+
+
+# 饮食建议
+class DietRecommendationResponse(BaseModel):
+    """饮食建议响应"""
+    id: int
+    disease_type: str
+    meal_type: Optional[MealTypeEnum] = None
+    title: str
+    content: str
+    food_suggestions: Optional[list] = None
+    food_restrictions: Optional[list] = None
+    applicable_conditions: Optional[dict] = None
+    priority: int = 0
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class PersonalizedDietResponse(BaseModel):
+    """个性化饮食建议响应"""
+    disease_type: str
+    breakfast: Optional[List[DietRecommendationResponse]] = None
+    lunch: Optional[List[DietRecommendationResponse]] = None
+    dinner: Optional[List[DietRecommendationResponse]] = None
+    general_tips: List[DietRecommendationResponse] = []
+
+
+# 并发症
+class ComplicationRecordCreate(BaseModel):
+    """并发症记录创建"""
+    complication_type: str = Field(..., max_length=100)
+    severity: ComplicationSeverityEnum
+    discovered_date: date
+    symptoms: Optional[str] = None
+    treatment: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class ComplicationRecordUpdate(BaseModel):
+    """并发症记录更新"""
+    severity: Optional[ComplicationSeverityEnum] = None
+    symptoms: Optional[str] = None
+    treatment: Optional[str] = None
+    is_resolved: Optional[bool] = None
+    resolved_date: Optional[date] = None
+    notes: Optional[str] = None
+
+
+class ComplicationRecordResponse(BaseModel):
+    """并发症记录响应"""
+    id: int
+    disease_id: int
+    complication_type: str
+    severity: ComplicationSeverityEnum
+    discovered_date: date
+    symptoms: Optional[str] = None
+    treatment: Optional[str] = None
+    is_resolved: bool = False
+    resolved_date: Optional[date] = None
+    notes: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+# 运动建议
+class ExerciseRecommendationResponse(BaseModel):
+    """运动建议响应"""
+    id: int
+    disease_type: str
+    title: str
+    exercise_type: str
+    duration_minutes: Optional[int] = None
+    frequency_per_week: Optional[int] = None
+    intensity: Optional[str] = None
+    description: str
+    precautions: Optional[str] = None
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class PersonalizedExerciseResponse(BaseModel):
+    """个性化运动建议响应"""
+    disease_type: str
+    recommended_exercises: List[ExerciseRecommendationResponse]
+    current_status: Optional[str] = None
+    safety_tips: List[str] = []
+
+
+# 用药提醒
+class MedicationReminderCreate(BaseModel):
+    """用药提醒创建"""
+    disease_id: int
+    user_medication_id: Optional[int] = None
+    reminder_time: str = Field(..., description="提醒时间 HH:MM:SS")
+    reminder_days: List[int] = Field(..., description="提醒日期 [0-6]，0=周日")
+    advance_minutes: int = Field(0, ge=0)
+    repeat_interval_minutes: Optional[int] = None
+
+
+class MedicationReminderUpdate(BaseModel):
+    """用药提醒更新"""
+    reminder_time: Optional[str] = None
+    reminder_days: Optional[List[int]] = None
+    status: Optional[ReminderStatusEnum] = None
+    advance_minutes: Optional[int] = None
+    repeat_interval_minutes: Optional[int] = None
+
+
+class MedicationReminderResponse(BaseModel):
+    """用药提醒响应"""
+    id: int
+    user_id: int
+    disease_id: int
+    user_medication_id: Optional[int] = None
+    reminder_time: Any
+    reminder_days: list
+    status: Any
+    advance_minutes: int = 0
+    repeat_interval_minutes: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+# 数据导出
+class ExportRequest(BaseModel):
+    """导出请求"""
+    disease_ids: List[int] = Field(..., description="要导出的慢性病ID列表")
+    format: str = Field("csv", description="导出格式: csv/pdf")
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    include_indicators: bool = True
+    include_medications: bool = False
+    include_complications: bool = False
+
+
+class ExportTaskResponse(BaseModel):
+    """导出任务响应"""
+    task_id: str
+    status: str
+    download_url: Optional[str] = None
+    expires_at: Optional[datetime] = None

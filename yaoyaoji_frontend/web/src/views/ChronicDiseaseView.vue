@@ -4,13 +4,13 @@
     <div class="page-header">
       <h1>慢性病管理</h1>
       <div class="header-actions">
-        <el-button text type="primary" @click="goToStats">
-          <el-icon><DataAnalysis /></el-icon>
-          统计分析
+        <el-button type="success" @click="showTemplateDialog = true">
+          <el-icon><Plus /></el-icon>
+          快速添加（模板）
         </el-button>
         <el-button type="primary" @click="openCreateDialog">
           <el-icon><Plus /></el-icon>
-          添加慢性病
+          自定义添加
         </el-button>
       </div>
     </div>
@@ -39,7 +39,30 @@
         <el-option label="控制不良" value="poor" />
       </el-select>
 
+      <el-select
+        v-model="filterDiseaseType"
+        placeholder="疾病类型"
+        clearable
+        style="width: 130px; margin-left: 10px"
+      >
+        <el-option label="高血压" value="hypertension" />
+        <el-option label="高血脂" value="hyperlipidemia" />
+        <el-option label="糖尿病" value="diabetes" />
+      </el-select>
+
+      <el-date-picker
+        v-model="filterDateRange"
+        type="daterange"
+        range-separator="至"
+        start-placeholder="开始日期"
+        end-placeholder="结束日期"
+        value-format="YYYY-MM-DD"
+        style="width: 260px; margin-left: 10px"
+        clearable
+      />
+
       <el-button @click="handleSearch" style="margin-left: 10px">搜索</el-button>
+      <el-button @click="clearFilters">清除筛选</el-button>
     </div>
 
     <!-- 疾病列表 -->
@@ -52,17 +75,24 @@
       >
         <div class="card-header">
           <div class="disease-title">
+            <el-icon
+              class="pin-icon"
+              :class="{ pinned: disease.is_pinned }"
+              @click.stop="togglePin(disease)"
+            >
+              <Star />
+            </el-icon>
             <h3>{{ disease.disease_name }}</h3>
             <el-tag :type="getStatusType(disease.control_status)" effect="light">
               {{ getStatusText(disease.control_status) }}
             </el-tag>
           </div>
-          <el-dropdown @command="handleCommand">
-            <el-icon style="cursor: pointer"><MoreFilled /></el-icon>
+          <el-dropdown @command="(cmd: string) => handleCommand(cmd, disease.id)" @click.stop>
+            <el-icon style="cursor: pointer" @click.stop><MoreFilled /></el-icon>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="edit" :command-value="disease.id">编辑</el-dropdown-item>
-                <el-dropdown-item command="delete" :command-value="disease.id">删除</el-dropdown-item>
+                <el-dropdown-item command="edit">编辑</el-dropdown-item>
+                <el-dropdown-item command="delete">删除</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -225,6 +255,7 @@
 
     <!-- 安排随访对话框 -->
     <el-dialog v-model="showFollowup" title="安排随访" width="600px">
+
       <el-form ref="followupFormRef" :model="followupForm" label-width="100px">
         <el-form-item label="随访频率" prop="frequency" required>
           <el-select v-model="followupForm.frequency" placeholder="选择随访频率">
@@ -260,6 +291,9 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 基于模板创建对话框 -->
+    <CreateDiseaseDialog v-model="showTemplateDialog" @created="loadDiseases" />
   </div>
 </template>
 
@@ -267,8 +301,10 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, MoreFilled, DataAnalysis } from '@element-plus/icons-vue'
+import { Plus, Search, MoreFilled, Star } from '@element-plus/icons-vue'
+import CreateDiseaseDialog from '@/components/CreateDiseaseDialog.vue'
 import { chronicDiseaseAPI } from '@/api/chronic-disease'
+import { advancedSearch } from '@/api/chronic-disease'
 import type { ChronicDisease } from '@/types'
 
 // 中国10大慢性病模板（带预定义的监控指标）
@@ -378,11 +414,14 @@ const diseases = ref<ChronicDisease[]>([])
 const loading = ref(false)
 const searchText = ref('')
 const filterStatus = ref('')
+const filterDiseaseType = ref('')
+const filterDateRange = ref<string[] | null>(null)
 
 // 对话框状态
 const showCreateDialog = ref(false)
 const showIndicator = ref(false)
 const showFollowup = ref(false)
+const showTemplateDialog = ref(false)
 
 // 表单数据
 const diseaseForm = ref({
@@ -445,16 +484,37 @@ const openCreateDialog = () => {
 const loadDiseases = async () => {
   loading.value = true
   try {
-    const response = await chronicDiseaseAPI.list({
-      search: searchText.value || undefined,
-      control_status: filterStatus.value || undefined
-    })
-    diseases.value = response.data
+    // 如果有高级筛选条件，使用高级搜索接口
+    if (filterDiseaseType.value || filterDateRange.value) {
+      const response = await advancedSearch({
+        search: searchText.value || undefined,
+        disease_type: filterDiseaseType.value || undefined,
+        control_status: filterStatus.value || undefined,
+        start_date: filterDateRange.value?.[0],
+        end_date: filterDateRange.value?.[1]
+      })
+      diseases.value = (response as any) || []
+    } else {
+      const response = await chronicDiseaseAPI.list({
+        search: searchText.value || undefined,
+        control_status: filterStatus.value || undefined
+      })
+      diseases.value = (response as any) || []
+    }
   } catch (error) {
     ElMessage.error('加载慢性病列表失败')
   } finally {
     loading.value = false
   }
+}
+
+// 清除筛选
+const clearFilters = () => {
+  searchText.value = ''
+  filterStatus.value = ''
+  filterDiseaseType.value = ''
+  filterDateRange.value = null
+  loadDiseases()
 }
 
 // 搜索
@@ -492,7 +552,18 @@ const showFollowupDialog = (disease: ChronicDisease) => {
 
 // 选中疾病
 const selectDisease = (disease: ChronicDisease) => {
-  console.log('选中疾病:', disease)
+  router.push(`/chronic-disease/${disease.id}`)
+}
+
+// 收藏/取消收藏
+const togglePin = async (disease: ChronicDisease) => {
+  try {
+    const res = await chronicDiseaseAPI.togglePin(disease.id) as any
+    ElMessage.success(res.message)
+    loadDiseases()
+  } catch {
+    ElMessage.error('操作失败')
+  }
 }
 
 // 保存慢性病
@@ -572,9 +643,9 @@ const handleCreateFollowup = async () => {
 }
 
 // 处理下拉菜单命令
-const handleCommand = (command: string, value?: number) => {
-  if (command === 'edit' && value) {
-    const disease = diseases.value.find(d => d.id === value)
+const handleCommand = (command: string, diseaseId: number) => {
+  if (command === 'edit') {
+    const disease = diseases.value.find(d => d.id === diseaseId)
     if (disease) {
       editingDisease.value = disease
       diseaseForm.value = {
@@ -588,24 +659,25 @@ const handleCommand = (command: string, value?: number) => {
       }
       showCreateDialog.value = true
     }
-  } else if (command === 'delete' && value) {
-    handleDeleteDisease(value)
+  } else if (command === 'delete') {
+    handleDeleteDisease(diseaseId)
   }
 }
 
 // 删除慢性病
 const handleDeleteDisease = (diseaseId: number) => {
-  ElMessageBox.confirm('确认删除该慢性病记录？', 'Warning', {
-    confirmButtonText: 'OK',
-    cancelButtonText: 'Cancel',
+  ElMessageBox.confirm('确认删除该慢性病记录？相关的指标、随访等数据也会一并删除。', '确认删除', {
+    confirmButtonText: '确认',
+    cancelButtonText: '取消',
     type: 'warning'
   }).then(async () => {
     try {
       await chronicDiseaseAPI.delete(diseaseId)
       ElMessage.success('删除成功')
       loadDiseases()
-    } catch (error) {
-      ElMessage.error('删除失败')
+    } catch (error: any) {
+      const msg = error?.response?.data?.detail || '删除失败'
+      ElMessage.error(msg)
     }
   })
 }
@@ -648,10 +720,6 @@ const getStatusText = (status: string): string => {
 const formatDate = (date: string): string => {
   if (!date) return '-'
   return new Date(date).toLocaleDateString('zh-CN')
-}
-
-const goToStats = () => {
-  router.push('/chronic-disease-stats')
 }
 
 // 组件挂载
@@ -726,6 +794,23 @@ onMounted(() => {
         font-size: 18px;
         font-weight: 600;
       }
+    }
+  }
+
+  .pin-icon {
+    cursor: pointer;
+    font-size: 18px;
+    color: #c0c4cc;
+    transition: all 0.2s;
+    flex-shrink: 0;
+
+    &:hover {
+      color: #e6a23c;
+      transform: scale(1.2);
+    }
+
+    &.pinned {
+      color: #e6a23c;
     }
   }
 

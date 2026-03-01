@@ -68,11 +68,6 @@ const router = createRouter({
           path: 'followup-schedule',
           name: 'followupSchedule',
           component: () => import('@/views/FollowupScheduleView.vue')
-        },
-        {
-          path: 'chronic-disease-stats',
-          name: 'chronicDiseaseStats',
-          component: () => import('@/views/ChronicDiseaseStatsView.vue')
         }
       ]
     }
