@@ -143,6 +143,7 @@ import { Search, Loading, FirstAidKit, Goods, Monitor, Warning } from '@element-
 import { ElMessage } from 'element-plus'
 import { aiDoctorAPI, userMedicationAPI } from '@/api'
 import { useMedicationStore } from '@/stores/medication'
+import { marked } from 'marked'
 
 const medicationStore = useMedicationStore()
 const searchQuery = ref('')
@@ -259,14 +260,12 @@ function handleError(error: any) {
   ElMessage.error(errorMsg)
 }
 
-// 格式化 AI 建议
+// 格式化 AI 建议 - 支持 Markdown
 function formatAISuggestion(text: string): string {
   if (!text) return ''
-  let formatted = text.replace(/【([^】]+)】/g, '<h3 class="ai-section-title">$1</h3>')
-  formatted = formatted.replace(/\n/g, '<br>')
-  formatted = formatted.replace(/^(\d+\.)\s/gm, '<strong class="ai-number">$1</strong> ')
-  formatted = formatted.replace(/(⚠️|❌|✅|💡|⚡)\s*([^：：<]+)/g, '<span class="ai-highlight">$1 $2</span>')
-  return formatted
+  // 将【】风格标题转为 markdown 标题
+  let processed = text.replace(/【([^】]+)】/g, '## $1')
+  return marked.parse(processed, { async: false }) as string
 }
 </script>
 
@@ -518,37 +517,137 @@ function formatAISuggestion(text: string): string {
 }
 
 /* Markdown Styles */
-.ai-markdown-content :deep(.ai-section-title) {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--color-primary);
-  margin: 20px 0 12px 0;
+.ai-markdown-content :deep(h1),
+.ai-markdown-content :deep(h2),
+.ai-markdown-content :deep(h3) {
+  color: #0e7490;
+  margin: 24px 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e7eb;
   display: flex;
   align-items: center;
+  gap: 8px;
 }
 
-.ai-markdown-content :deep(.ai-section-title)::before {
+.ai-markdown-content :deep(h1)::before,
+.ai-markdown-content :deep(h2)::before,
+.ai-markdown-content :deep(h3)::before {
   content: '';
   display: inline-block;
   width: 4px;
-  height: 16px;
-  background: var(--color-primary);
-  margin-right: 8px;
+  height: 18px;
+  background: #0e7490;
   border-radius: 2px;
+  flex-shrink: 0;
 }
 
-.ai-markdown-content :deep(.ai-number) {
-  color: var(--color-secondary);
-  font-weight: 700;
+.ai-markdown-content :deep(h1) { font-size: 20px; }
+.ai-markdown-content :deep(h2) { font-size: 17px; }
+.ai-markdown-content :deep(h3) { font-size: 15px; border-bottom: none; }
+
+.ai-markdown-content :deep(h4),
+.ai-markdown-content :deep(h5) {
+  color: #374151;
+  margin: 16px 0 8px 0;
+  font-size: 15px;
 }
 
-.ai-markdown-content :deep(.ai-highlight) {
-  background: #fff7ed;
-  color: #c2410c;
+.ai-markdown-content :deep(p) {
+  margin: 8px 0;
+  line-height: 1.8;
+}
+
+.ai-markdown-content :deep(ul),
+.ai-markdown-content :deep(ol) {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+.ai-markdown-content :deep(li) {
+  margin: 6px 0;
+  line-height: 1.7;
+}
+
+.ai-markdown-content :deep(li)::marker {
+  color: #0e7490;
+  font-weight: 600;
+}
+
+.ai-markdown-content :deep(strong) {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.ai-markdown-content :deep(em) {
+  color: #6b7280;
+  font-style: italic;
+}
+
+.ai-markdown-content :deep(blockquote) {
+  margin: 12px 0;
+  padding: 12px 16px;
+  border-left: 4px solid #0e7490;
+  background: #f0f9ff;
+  border-radius: 0 8px 8px 0;
+  color: #334155;
+}
+
+.ai-markdown-content :deep(blockquote p) {
+  margin: 4px 0;
+}
+
+.ai-markdown-content :deep(code) {
+  background: #f1f5f9;
   padding: 2px 6px;
   border-radius: 4px;
+  font-size: 0.9em;
+  color: #be185d;
+}
+
+.ai-markdown-content :deep(pre) {
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+.ai-markdown-content :deep(pre code) {
+  background: none;
+  color: inherit;
+  padding: 0;
+}
+
+.ai-markdown-content :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+.ai-markdown-content :deep(th) {
+  background: #f0f9ff;
+  padding: 10px 12px;
+  text-align: left;
   font-weight: 600;
-  font-size: 0.95em;
+  color: #0e7490;
+  border: 1px solid #e0f2fe;
+}
+
+.ai-markdown-content :deep(td) {
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.ai-markdown-content :deep(tr:nth-child(even)) {
+  background: #f9fafb;
+}
+
+.ai-markdown-content :deep(hr) {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 20px 0;
 }
 
 @keyframes pulse {
