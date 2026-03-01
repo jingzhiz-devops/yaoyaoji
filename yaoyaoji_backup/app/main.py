@@ -25,6 +25,14 @@ app = FastAPI(
     description="药药记 - 智能用药安全管理系统",
 )
 
+
+@app.on_event("startup")
+async def startup():
+    """启动时自动创建数据库表（如果不存在）"""
+    from app.database import Base, engine
+    from app.models import models  # noqa: F401 确保所有模型已导入
+    Base.metadata.create_all(bind=engine)
+
 # CORS 配置 - 允许前端跨域访问
 app.add_middleware(
     CORSMiddleware,
