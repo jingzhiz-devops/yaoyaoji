@@ -439,7 +439,8 @@ function resetForm() {
 }
 
 .content-wrapper {
-  background: white;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
   border-radius: var(--radius-md);
   padding: 24px;
   box-shadow: var(--shadow-card);
@@ -577,7 +578,7 @@ function resetForm() {
 }
 
 .mini-symptom-card {
-  background: white;
+  background: rgba(255, 255, 255, 0.85);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 12px;

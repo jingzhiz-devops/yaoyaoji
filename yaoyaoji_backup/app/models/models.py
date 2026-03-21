@@ -98,6 +98,7 @@ class MedicationSchedule(Base):
     purchase_date = Column(Date, nullable=True)  # 药品购入日期
     therapy_duration = Column(Integer, nullable=True)  # 吃药疗程（天数）
     remind_advance_days = Column(Integer, default=5)  # 提前提醒备药天数，默认5天
+    notes = Column(Text, nullable=True)  # 备注
     
     # 关系
     user_medication = relationship("UserMedication", back_populates="schedules")

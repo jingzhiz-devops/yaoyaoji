@@ -30,7 +30,6 @@
           <div class="schedule-info">
             <div class="medicine-name-row">
               <h3>{{ row.user_medication?.custom_name || row.user_medication?.medicine?.name || '未知药品' }}</h3>
-              <el-tag size="small" effect="plain">{{ formatFrequency(row.frequency) }}</el-tag>
             </div>
             <div class="schedule-details">
               <div class="detail-item">
@@ -38,26 +37,25 @@
                 <span>{{ row.start_date }} <span v-if="row.end_date">至 {{ row.end_date }}</span></span>
               </div>
               <div class="detail-item">
+                <el-icon><Timer /></el-icon>
+                <span>{{ formatFrequency(row.frequency) }}</span>
                 <el-icon><Dish /></el-icon>
                 <span>{{ row.dose }}</span>
               </div>
               <div v-if="row.purchase_date && row.therapy_duration" class="detail-item" style="color: #e6a23c;">
                 <span>🛒 {{ row.purchase_date }} 购入，{{ row.therapy_duration }}天疗程</span>
               </div>
-            </div>
-          </div>
-          
-          <div class="schedule-times">
-            <div class="time-label">服药时间</div>
-            <div class="time-tags">
-              <el-tag 
-                v-for="(time, index) in row.scheduled_times" 
-                :key="index" 
-                effect="light"
-                :type="getTimeStatus(time)"
-              >
-                {{ time.substring(0, 5) }}
-              </el-tag>
+              <div class="detail-item times-inline">
+                <span class="time-label-inline">服药时间</span>
+                <el-tag 
+                  v-for="(time, index) in row.scheduled_times" 
+                  :key="index" 
+                  effect="light"
+                  :type="getTimeStatus(time)"
+                >
+                  {{ time.substring(0, 5) }}
+                </el-tag>
+              </div>
             </div>
           </div>
 
@@ -179,7 +177,7 @@
 import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { scheduleAPI, userMedicationAPI } from '@/api'
-import { Plus, AlarmClock, Calendar, Dish, Edit, Delete } from '@element-plus/icons-vue'
+import { Plus, AlarmClock, Calendar, Dish, Edit, Delete, Timer } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 
 const dialogVisible = ref(false)
@@ -469,20 +467,32 @@ function getTimeStatus(timeStr: string): string {
 
 // 检查是否需要备药提醒
 function needsReplenishReminder(schedule: any): boolean {
-  if (!schedule.purchase_date || !schedule.therapy_duration || !schedule.remind_advance_days) {
+  const advanceDays = schedule.remind_advance_days || 5
+
+  // 优先用 end_date 判断
+  if (schedule.end_date) {
+    const endDate = new Date(schedule.end_date)
+    endDate.setHours(0, 0, 0, 0)
+    const reminderDate = new Date(endDate)
+    reminderDate.setDate(reminderDate.getDate() - advanceDays)
+    reminderDate.setHours(0, 0, 0, 0)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return reminderDate <= today && today < endDate
+  }
+
+  // 没有 end_date 时，用 purchase_date + therapy_duration 兜底
+  if (!schedule.purchase_date || !schedule.therapy_duration) {
     return false
   }
-  
   const purchaseDate = new Date(schedule.purchase_date)
   const endOfTherapy = new Date(purchaseDate)
   endOfTherapy.setDate(endOfTherapy.getDate() + schedule.therapy_duration)
   const reminderDate = new Date(endOfTherapy)
-  reminderDate.setDate(reminderDate.getDate() - schedule.remind_advance_days)
+  reminderDate.setDate(reminderDate.getDate() - advanceDays)
   reminderDate.setHours(0, 0, 0, 0)
-  
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  
   return reminderDate <= today && today < endOfTherapy
 }
 </script>
@@ -630,7 +640,7 @@ function needsReplenishReminder(schedule: any): boolean {
 }
 
 .schedule-info {
-  flex: 2;
+  flex: 1;
 }
 
 .medicine-name-row {
@@ -652,6 +662,8 @@ function needsReplenishReminder(schedule: any): boolean {
   gap: 24px;
   color: var(--color-text-secondary);
   font-size: 14px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .detail-item {
@@ -665,6 +677,7 @@ function needsReplenishReminder(schedule: any): boolean {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding-left: 5em;
 }
 
 .time-label {
@@ -676,6 +689,19 @@ function needsReplenishReminder(schedule: any): boolean {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.times-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.time-label-inline {
+  font-size: 12px;
+  color: var(--color-text-light);
+  white-space: nowrap;
 }
 
 .schedule-actions {

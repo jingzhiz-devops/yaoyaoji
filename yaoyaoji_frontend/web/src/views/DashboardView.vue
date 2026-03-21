@@ -117,7 +117,7 @@
               <div class="schedule-content">
                 <div class="medicine-info">
                   <h4>{{ schedule.user_medication?.custom_name || schedule.user_medication?.medicine?.name }}</h4>
-                  <p>{{ schedule.dose }}</p>
+                  <p>{{ schedule.dose }}<span v-if="schedule.notes" class="schedule-notes">{{ schedule.notes }}</span></p>
                 </div>
                 <div class="time-tags">
                   <span v-for="(time, index) in schedule.scheduled_times" :key="index">
@@ -335,7 +335,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useMedicationStore } from '@/stores/medication'
@@ -429,18 +429,18 @@ function handleUserCommand(command: string) {
   }
 }
 
-// 根据时间显示不同的问候语
+// 根据时间显示不同的问候语（每分钟更新）
+const currentHour = ref(new Date().getHours())
+let greetingTimer: ReturnType<typeof setInterval>
+
 const greeting = computed(() => {
-  const hour = new Date().getHours()
-  if (hour >= 5 && hour < 12) {
-    return '上午好'
-  } else if (hour >= 12 && hour < 18) {
-    return '中午好'
-  } else if (hour >= 18 && hour < 22) {
-    return '晚上好'
-  } else {
-    return '夜深了'
-  }
+  const hour = currentHour.value
+  if (hour >= 5 && hour < 8) return '早上好'
+  if (hour >= 8 && hour < 12) return '上午好'
+  if (hour >= 12 && hour < 14) return '中午好'
+  if (hour >= 14 && hour < 18) return '下午好'
+  if (hour >= 18 && hour < 22) return '晚上好'
+  return '夜深了'
 })
 
 // 计算BMI
@@ -491,6 +491,10 @@ const todayPendingCount = computed(() => {
 })
 
 onMounted(async () => {
+  greetingTimer = setInterval(() => {
+    currentHour.value = new Date().getHours()
+  }, 60000)
+
   if (!userStore.user) {
     await userStore.fetchUserInfo()
   }
@@ -507,6 +511,10 @@ onMounted(async () => {
     fetchCheckups(),
     fetchFamilyMembers()
   ])
+})
+
+onUnmounted(() => {
+  clearInterval(greetingTimer)
 })
 
 async function fetchTodaySchedules() {
@@ -889,7 +897,8 @@ async function handleSwitchToMember(member: any) {
 }
 
 .stat-card {
-  background: white;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
   border-radius: var(--radius-md);
   padding: 20px;
   display: flex;
@@ -973,7 +982,8 @@ async function handleSwitchToMember(member: any) {
 
 /* Content Cards */
 .content-card {
-  background: white;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
   border-radius: var(--radius-md);
   padding: 24px;
   box-shadow: var(--shadow-card);
@@ -1057,6 +1067,12 @@ async function handleSwitchToMember(member: any) {
   margin: 0 0 8px 0;
   font-size: 13px;
   color: var(--color-text-secondary);
+}
+
+.schedule-notes {
+  margin-left: 6px;
+  font-size: 12px;
+  color: var(--color-text-placeholder, #aaa);
 }
 
 .time-tags {
