@@ -13,9 +13,9 @@
   --color-text-light: #9CA3AF;
   
   /* Background Colors */
-  --color-bg-page: #F3F4F6;
-  --color-bg-surface: #FFFFFF;
-  --color-bg-sidebar: #FFFFFF;
+  --color-bg-page: #edf7f4;
+  --color-bg-surface: #f5fdfb;
+  --color-bg-sidebar: #f0faf7;
   
   /* Status Colors */
   --color-success: #10B981;
@@ -58,7 +58,7 @@
 body {
   min-height: 100vh;
   color: var(--color-text-main);
-  background: var(--color-bg-page);
+  background: linear-gradient(135deg, #e8f5f1 0%, #f0faf7 50%, #e6f7f2 100%);
   line-height: 1.6;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   font-size: 15px;

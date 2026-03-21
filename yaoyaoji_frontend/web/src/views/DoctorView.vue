@@ -414,7 +414,8 @@ function formatAISuggestion(text: string): string {
 /* Result Container */
 .ai-result-container {
   margin-top: 32px;
-  background: white;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
   border: 1px solid var(--color-border);
   border-radius: 12px;
   overflow: hidden;

@@ -937,7 +937,8 @@ async function deleteVaccination(id: number) {
 
 /* Tabs */
 .profile-content {
-  background: white;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-card);
   overflow: hidden;

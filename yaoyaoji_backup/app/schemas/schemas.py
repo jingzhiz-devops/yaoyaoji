@@ -154,6 +154,7 @@ class MedicationScheduleBase(BaseModel):
     purchase_date: Optional[date] = Field(None, description="药品购入日期")
     therapy_duration: Optional[int] = Field(None, description="吃药疗程（天数）")
     remind_advance_days: int = Field(5, description="提前提醒备药天数")
+    notes: Optional[str] = Field(None, description="备注")
 
 
 class MedicationScheduleCreate(MedicationScheduleBase):

@@ -59,7 +59,11 @@
                 <div v-for="indicator in disease.indicators" :key="indicator.id" class="reference-card">
                   <div class="ref-name">{{ indicator.indicator_name }}</div>
                   <div class="ref-range" v-if="indicator.normal_range_min != null || indicator.normal_range_max != null">
-                    <span class="ref-value">{{ indicator.normal_range_min ?? '-' }} ~ {{ indicator.normal_range_max ?? '-' }}</span>
+                    <span class="ref-value">
+                      <template v-if="indicator.normal_range_max == null">≥ {{ indicator.normal_range_min }}</template>
+                      <template v-else-if="indicator.normal_range_min == null">≤ {{ indicator.normal_range_max }}</template>
+                      <template v-else>{{ indicator.normal_range_min }} ~ {{ indicator.normal_range_max }}</template>
+                    </span>
                     <span class="ref-unit">{{ indicator.unit }}</span>
                   </div>
                   <div class="ref-range" v-else>

@@ -52,6 +52,14 @@
 
       <el-container class="content-container">
         <el-main class="main-content">
+          <!-- 浮动装饰元素 -->
+          <div class="floating-decorations">
+            <div class="float-circle float-1"></div>
+            <div class="float-circle float-2"></div>
+            <div class="float-circle float-3"></div>
+            <div class="float-circle float-4"></div>
+            <div class="float-circle float-5"></div>
+          </div>
           <router-view v-slot="{ Component }">
             <transition name="fade" mode="out-in">
               <component :is="Component" />
@@ -112,12 +120,47 @@ function handleLogout() {
 
 /* Sidebar Styling */
 .sidebar {
-  background-color: var(--color-bg-sidebar);
-  border-right: 1px solid var(--color-border);
+  background: linear-gradient(180deg, #e8f7f3 0%, #f0faf7 50%, #e6f5f0 100%);
+  border-right: 1px solid rgba(42, 157, 143, 0.15);
   display: flex;
   flex-direction: column;
   transition: width 0.3s;
   z-index: 10;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 侧边栏浮动装饰 */
+.sidebar::before {
+  content: '';
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(42, 157, 143, 0.1), rgba(42, 157, 143, 0.02));
+  top: -60px;
+  right: -60px;
+  animation: sideFloat 18s infinite ease-in-out;
+  pointer-events: none;
+}
+
+.sidebar::after {
+  content: '';
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(42, 157, 143, 0.08), rgba(42, 157, 143, 0.01));
+  bottom: 80px;
+  left: -40px;
+  animation: sideFloat 24s infinite ease-in-out reverse;
+  pointer-events: none;
+}
+
+@keyframes sideFloat {
+  0%, 100% { transform: translate(0, 0); }
+  33% { transform: translate(10px, -15px); }
+  66% { transform: translate(-8px, 10px); }
 }
 
 .brand {
@@ -163,7 +206,7 @@ function handleLogout() {
 }
 
 :deep(.el-menu-item:hover) {
-  background-color: var(--color-bg-page);
+  background-color: rgba(42, 157, 143, 0.08);
   color: var(--color-primary);
 }
 
@@ -193,6 +236,96 @@ function handleLogout() {
 .main-content {
   padding: 40px;
   overflow-y: auto;
+  background: linear-gradient(135deg, #e8f5f1 0%, #f0faf7 40%, #e6f7f2 70%, #f5fdf9 100%);
+  position: relative;
+}
+
+/* 浮动装饰元素 */
+.floating-decorations {
+  position: fixed;
+  top: 0;
+  left: 260px;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.float-circle {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(42, 157, 143, 0.08), rgba(42, 157, 143, 0.02));
+  animation: floatUp 20s infinite ease-in-out;
+}
+
+.float-1 {
+  width: 200px;
+  height: 200px;
+  top: 10%;
+  right: 5%;
+  animation-duration: 18s;
+  animation-delay: 0s;
+}
+
+.float-2 {
+  width: 120px;
+  height: 120px;
+  top: 60%;
+  right: 20%;
+  animation-duration: 22s;
+  animation-delay: -4s;
+}
+
+.float-3 {
+  width: 160px;
+  height: 160px;
+  top: 30%;
+  left: 10%;
+  animation-duration: 25s;
+  animation-delay: -8s;
+}
+
+.float-4 {
+  width: 80px;
+  height: 80px;
+  bottom: 15%;
+  left: 30%;
+  animation-duration: 16s;
+  animation-delay: -2s;
+}
+
+.float-5 {
+  width: 100px;
+  height: 100px;
+  top: 70%;
+  right: 40%;
+  animation-duration: 20s;
+  animation-delay: -6s;
+}
+
+@keyframes floatUp {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.6;
+  }
+  25% {
+    transform: translate(15px, -20px) scale(1.05);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translate(-10px, -35px) scale(1.1);
+    opacity: 0.5;
+  }
+  75% {
+    transform: translate(20px, -15px) scale(0.95);
+    opacity: 0.7;
+  }
+}
+
+.main-content > :not(.floating-decorations) {
+  position: relative;
+  z-index: 1;
 }
 
 /* Transitions */

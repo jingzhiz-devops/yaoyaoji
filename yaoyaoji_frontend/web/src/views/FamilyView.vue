@@ -538,7 +538,8 @@ function getRoleColor(role: string): string {
 }
 
 .family-content {
-  background: white;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-card);
   overflow: hidden;
@@ -727,7 +728,7 @@ function getRoleColor(role: string): string {
 
 .member-card {
   border: none;
-  background: white;
+  background: rgba(255, 255, 255, 0.85);
   border: 1px solid var(--color-border);
   transition: all 0.3s;
   position: relative;
