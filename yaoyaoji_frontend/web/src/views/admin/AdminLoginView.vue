@@ -146,8 +146,12 @@ async function handleLogin() {
         router.push('/admin/dashboard')
       } catch (error: any) {
         console.error('登录错误:', error)
-        const errorMsg = error.response?.data?.detail || '登录失败，请检查账号密码'
-        ElMessage.error(errorMsg)
+        if (error.response?.status === 403) {
+          ElMessage.error(error.response?.data?.detail || '该账号已被禁用，请联系管理员')
+        } else {
+          const errorMsg = error.response?.data?.detail || '登录失败，请检查账号密码'
+          ElMessage.error(errorMsg)
+        }
       } finally {
         loading.value = false
       }

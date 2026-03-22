@@ -190,8 +190,16 @@ async function handleLogin() {
         ElMessage.success('登录成功')
         router.push('/')
       } catch (error: any) {
+        // 检查是否是账号被禁用
+        if (error.response?.status === 403) {
+          ElMessage({
+            type: 'error',
+            message: error.response?.data?.detail || '该账号已被禁用，请联系管理员',
+            duration: 5000,
+            showClose: true
+          })
         // 检查是否是用户不存在的错误
-        if (error.response?.status === 401 || error.response?.data?.detail?.includes('Incorrect')) {
+        } else if (error.response?.status === 401 || error.response?.data?.detail?.includes('Incorrect')) {
           ElMessage({
             type: 'warning',
             message: '用户名或密码错误',

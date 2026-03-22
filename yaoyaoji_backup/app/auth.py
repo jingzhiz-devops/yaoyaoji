@@ -56,6 +56,11 @@ def authenticate_user(db: Session, username: str, password: str) -> Optional[Use
         return None
     if not verify_password(password, str(user.password_hash)):
         return None
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="该账号已被禁用，请联系管理员",
+        )
     return user
 
 
@@ -82,6 +87,12 @@ async def get_current_user(
     user = db.query(User).filter(User.username == token_data.username).first()
     if user is None:
         raise credentials_exception
+    
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="该账号已被禁用，请联系管理员",
+        )
     
     # 节流更新 last_login：每 60 秒最多写一次数据库
     now = time.time()
