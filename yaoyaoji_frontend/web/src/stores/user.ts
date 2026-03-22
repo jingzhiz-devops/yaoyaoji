@@ -20,8 +20,8 @@ export const useUserStore = defineStore('user', () => {
   const adminToken = ref<string | null>(localStorage.getItem(ADMIN_TOKEN_KEY))
 
   // 普通用户登录
-  async function login(username: string, password: string) {
-    const res: any = await authAPI.login(username, password)
+  async function login(username: string, password: string, captchaId: string, captchaCode: string) {
+    const res: any = await authAPI.login(username, password, captchaId, captchaCode)
     token.value = res.access_token
     localStorage.setItem(TOKEN_KEY, res.access_token)
     await fetchUserInfo()
@@ -29,8 +29,8 @@ export const useUserStore = defineStore('user', () => {
   }
 
   // 管理员登录
-  async function adminLogin(username: string, password: string) {
-    const res: any = await authAPI.login(username, password)
+  async function adminLogin(username: string, password: string, captchaId: string, captchaCode: string) {
+    const res: any = await authAPI.login(username, password, captchaId, captchaCode)
     adminToken.value = res.access_token
     localStorage.setItem(ADMIN_TOKEN_KEY, res.access_token)
     await fetchAdminInfo()
@@ -38,7 +38,7 @@ export const useUserStore = defineStore('user', () => {
   }
 
   // 注册
-  async function register(data: { username: string; password: string; email?: string }) {
+  async function register(data: { username: string; password: string; email?: string; captcha_id?: string; captcha_code?: string }) {
     await authAPI.register(data)
   }
 
