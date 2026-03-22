@@ -18,7 +18,9 @@ const service: AxiosInstance = axios.create({
 
 service.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token')
+    // 根据当前页面路径选择对应的 token
+    const isAdminPath = window.location.pathname.startsWith('/admin')
+    const token = localStorage.getItem(isAdminPath ? 'admin_token' : 'token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -46,9 +48,10 @@ service.interceptors.response.use(
     if (error.response) {
       const { status } = error.response
       // 401错误自动跳转登录，但不显示错误消息（由页面处理）
-      if (status === 401 && window.location.pathname !== '/login') {
-        localStorage.removeItem('token')
-        window.location.href = '/login'
+      if (status === 401 && window.location.pathname !== '/login' && window.location.pathname !== '/admin/login') {
+        const isAdminPath = window.location.pathname.startsWith('/admin')
+        localStorage.removeItem(isAdminPath ? 'admin_token' : 'token')
+        window.location.href = isAdminPath ? '/admin/login' : '/login'
       }
       // 其他错误不在这里处理，由各个页面自己处理
     } else if (error.request) {

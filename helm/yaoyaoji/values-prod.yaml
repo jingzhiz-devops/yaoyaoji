@@ -32,6 +32,8 @@ ingress:
   tls:
     enabled: true
     secretName: yaoyaoji-tls
+    certManager: true
+    clusterIssuer: letsencrypt-prod
 
 # Application Configuration
 config:

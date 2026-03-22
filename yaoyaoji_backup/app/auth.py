@@ -1,6 +1,7 @@
 """
 认证和安全相关工具
 """
+import time
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
@@ -13,6 +14,10 @@ from app.config import settings
 from app.database import get_db
 from app.models.models import User
 from app.schemas.schemas import TokenData
+
+# 内存缓存：记录每个用户最近一次写入 last_login 的时间，避免每次请求都写数据库
+_last_login_cache: dict[int, float] = {}
+LAST_LOGIN_UPDATE_INTERVAL = 60  # 每 60 秒最多更新一次数据库
 
 # 密码加密上下文
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -78,4 +83,24 @@ async def get_current_user(
     if user is None:
         raise credentials_exception
     
+    # 节流更新 last_login：每 60 秒最多写一次数据库
+    now = time.time()
+    last_update = _last_login_cache.get(user.id, 0)
+    if now - last_update > LAST_LOGIN_UPDATE_INTERVAL:
+        user.last_login = datetime.now()
+        db.commit()
+        _last_login_cache[user.id] = now
+    
     return user
+
+
+async def require_admin(
+    current_user: User = Depends(get_current_user)
+) -> User:
+    """要求当前用户为管理员"""
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="需要管理员权限"
+        )
+    return current_user

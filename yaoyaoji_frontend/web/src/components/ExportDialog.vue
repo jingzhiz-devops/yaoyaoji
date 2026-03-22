@@ -98,10 +98,19 @@ const handleExport = async () => {
   }
 }
 
-const handleDownload = () => {
-  if (downloadUrl.value) {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
-    window.open(`${baseUrl.replace('/api', '')}${downloadUrl.value}`, '_blank')
+const handleDownload = async () => {
+  if (!downloadUrl.value) return
+  try {
+    const filename = downloadUrl.value.split('/').pop() || 'export.csv'
+    const blob = await exportAPI.download(filename) as unknown as Blob
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch {
+    ElMessage.error('下载失败')
   }
 }
 </script>

@@ -1,0 +1,68 @@
+# EC2 + KinD 部署配置
+# 使用: helm install yaoyaoji ./helm/yaoyaoji -f ./helm/yaoyaoji/values-ec2.yaml
+
+global:
+  environment: production
+
+# KinD 单节点，资源适当缩减
+mysql:
+  storage:
+    size: 10Gi
+    storageClass: standard
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+backend:
+  replicaCount: 1  # KinD 单节点，1 副本即可
+  image:
+    repository: ghcr.io/jingzhiz-devops/yaoyaoji-backend
+    tag: latest
+  storage:
+    size: 5Gi
+    storageClass: standard
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+frontend:
+  replicaCount: 1
+  image:
+    repository: ghcr.io/jingzhiz-devops/yaoyaoji-frontend
+    tag: latest
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+# Ingress - 使用你的真实域名，开启 HTTPS
+ingress:
+  enabled: true
+  className: nginx
+  host: yaoyaoji.example.com  # 替换为你的真实域名
+  tls:
+    enabled: true
+    secretName: yaoyaoji-tls
+    certManager: true
+    clusterIssuer: letsencrypt-prod
+
+config:
+  debug: "false"
+
+# 部署时用 --set 覆盖，不要在文件里写真实密码
+# helm install yaoyaoji ./helm/yaoyaoji -f values-ec2.yaml \
+#   --set secrets.mysqlPassword=<真实密码> \
+#   --set secrets.secretKey=<真实密钥> \
+#   --set secrets.deepseekApiKey=<真实key> \
+#   --set ingress.host=<你的域名>

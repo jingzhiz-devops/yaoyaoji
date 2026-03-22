@@ -10,6 +10,8 @@ export interface User {
   avatar?: string
   birth_date?: string
   real_name?: string
+  is_admin?: boolean  // 是否管理员
+  is_active?: boolean  // 账号是否启用
   is_family_admin?: boolean  // 是否家庭管理员
   relation_to_admin?: string  // 与管理员的关系（角色）：parent/child/elderly/spouse/other/admin/member
   created_at: string
@@ -131,6 +133,7 @@ export interface FollowupPlan {
   followup_checklist?: any
   target_values?: any
   reminder_days: number
+  notes?: string
   created_at: string
   updated_at: string
 }

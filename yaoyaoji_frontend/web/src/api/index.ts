@@ -16,7 +16,12 @@ export const authAPI = {
     }),
   
   // 获取当前用户信息
-  getCurrentUser: () => service.get('/users/me'),
+  getCurrentUser: (customToken?: string) => {
+    const config = customToken
+      ? { headers: { Authorization: `Bearer ${customToken}` } }
+      : {}
+    return service.get('/users/me', config)
+  },
   
   // 修改密码
   changePassword: (oldPassword: string, newPassword: string) =>
