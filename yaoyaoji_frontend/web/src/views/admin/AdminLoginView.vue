@@ -65,6 +65,28 @@
               </el-icon>
             </div>
           </el-form-item>
+          <el-form-item prop="captchaCode">
+            <div class="captcha-row">
+              <div class="input-wrapper" style="flex: 1;">
+                <el-icon class="input-icon"><Key /></el-icon>
+                <input
+                  v-model="loginForm.captchaCode"
+                  type="text"
+                  placeholder="请输入验证码"
+                  class="sci-input"
+                  maxlength="4"
+                  @keyup.enter="handleLogin"
+                />
+              </div>
+              <img
+                :src="captchaUrl"
+                alt="验证码"
+                class="captcha-img"
+                title="点击刷新验证码"
+                @click="refreshCaptcha"
+              />
+            </div>
+          </el-form-item>
 
           <button
             type="button"
@@ -94,11 +116,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
-import { User, Lock, View, Hide, ArrowLeft } from '@element-plus/icons-vue'
+import { authAPI } from '@/api'
+import { User, Lock, View, Hide, ArrowLeft, Key } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -107,14 +130,19 @@ const loading = ref(false)
 const showPassword = ref(false)
 const loginFormRef = ref()
 
+const captchaId = ref('')
+const captchaUrl = ref('')
+
 const loginForm = reactive({
   username: '',
-  password: ''
+  password: '',
+  captchaCode: ''
 })
 
 const loginRules = {
   username: [{ required: true, message: '请输入管理员账号', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+  captchaCode: [{ required: true, message: '请输入验证码', trigger: 'blur' }]
 }
 
 function particleStyle(n: number) {
@@ -134,7 +162,7 @@ async function handleLogin() {
     if (valid) {
       loading.value = true
       try {
-        await userStore.adminLogin(loginForm.username, loginForm.password)
+        await userStore.adminLogin(loginForm.username, loginForm.password, captchaId.value, loginForm.captchaCode)
         
         if (!userStore.adminUser?.is_admin) {
           ElMessage.error('您没有管理员权限')
@@ -145,8 +173,14 @@ async function handleLogin() {
         ElMessage.success('登录成功')
         router.push('/admin/dashboard')
       } catch (error: any) {
+        // 登录失败后刷新验证码
+        refreshCaptcha()
+        loginForm.captchaCode = ''
+
         console.error('登录错误:', error)
-        if (error.response?.status === 403) {
+        if (error.response?.status === 400 && error.response?.data?.detail?.includes('验证码')) {
+          ElMessage.warning(error.response.data.detail)
+        } else if (error.response?.status === 403) {
           ElMessage.error(error.response?.data?.detail || '该账号已被禁用，请联系管理员')
         } else {
           const errorMsg = error.response?.data?.detail || '登录失败，请检查账号密码'
@@ -158,6 +192,20 @@ async function handleLogin() {
     }
   })
 }
+
+async function refreshCaptcha() {
+  try {
+    const res = await authAPI.getCaptcha()
+    captchaId.value = res.captchaId
+    captchaUrl.value = res.imageUrl
+  } catch {
+    console.error('获取验证码失败')
+  }
+}
+
+onMounted(() => {
+  refreshCaptcha()
+})
 </script>
 
 <style scoped>
@@ -538,5 +586,26 @@ async function handleLogin() {
   .title {
     font-size: 22px;
   }
+}
+
+/* ===== 验证码 ===== */
+.captcha-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  align-items: center;
+}
+
+.captcha-img {
+  height: 46px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: opacity 0.3s;
+  flex-shrink: 0;
+}
+
+.captcha-img:hover {
+  opacity: 0.8;
 }
 </style>

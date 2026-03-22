@@ -31,13 +31,11 @@
                       </div>
                       <div class="symptom-info">
                         <h4 class="symptom-text">{{ symptom.symptom_text }}</h4>
-                        <el-rate 
-                          v-model="symptom.intensity" 
-                          disabled 
-                          show-score 
-                          text-color="#ff9900"
-                          score-template="{value} 分"
-                        />
+                        <div class="symptom-intensity-display">
+                          <span class="intensity-face">{{ getIntensityIcon(symptom.intensity) }}</span>
+                          <span class="intensity-text-inline">{{ getIntensityDesc(symptom.intensity) }}</span>
+                          <el-tag :type="getTagType(symptom.intensity)" size="small">{{ symptom.intensity }}级</el-tag>
+                        </div>
                       </div>
                     </div>
                     <div class="symptom-actions">
@@ -94,7 +92,7 @@
                       <div class="mini-text">{{ symptom.symptom_text }}</div>
                       <div class="mini-meta">
                         <span class="mini-time">{{ symptom.recorded_at }}</span>
-                        <span class="mini-intensity">{{ symptom.intensity }}分</span>
+                        <span class="mini-intensity">{{ getIntensityIcon(symptom.intensity) }} {{ getIntensityDesc(symptom.intensity) }}</span>
                       </div>
                     </div>
                   </div>
@@ -128,14 +126,14 @@
                   size="default"
                 />
               </el-form-item>
-              <el-form-item label="最低强度">
+              <el-form-item label="最低不适程度">
                 <el-select v-model="minIntensity" @change="fetchSymptoms" style="width: 120px">
                   <el-option label="全部" :value="0" />
-                  <el-option label="1星及以上" :value="1" />
-                  <el-option label="2星及以上" :value="2" />
-                  <el-option label="3星及以上" :value="3" />
-                  <el-option label="4星及以上" :value="4" />
-                  <el-option label="5星" :value="5" />
+                  <el-option label="1级及以上" :value="1" />
+                  <el-option label="2级及以上" :value="2" />
+                  <el-option label="3级及以上" :value="3" />
+                  <el-option label="4级及以上" :value="4" />
+                  <el-option label="5级" :value="5" />
                 </el-select>
               </el-form-item>
             </el-form>
@@ -149,9 +147,13 @@
                 </template>
               </el-table-column>
               <el-table-column prop="symptom_text" label="症状描述" />
-              <el-table-column label="强度" width="200">
+              <el-table-column label="不适程度" width="200">
                 <template #default="{ row }">
-                  <el-rate v-model="row.intensity" disabled show-score text-color="#ff9900" />
+                  <div class="table-intensity">
+                    <span class="table-intensity-icon">{{ getIntensityIcon(row.intensity) }}</span>
+                    <span class="table-intensity-text">{{ getIntensityDesc(row.intensity) }}</span>
+                    <el-tag :type="getTagType(row.intensity)" size="small">{{ row.intensity }}级</el-tag>
+                  </div>
                 </template>
               </el-table-column>
               <el-table-column prop="recorded_at" label="记录时间" width="180" />
@@ -173,24 +175,52 @@
     <el-dialog 
       v-model="dialogVisible" 
       :title="editingId ? '编辑症状' : '记录症状'" 
-      width="500px"
+      width="600px"
       class="custom-dialog"
       destroy-on-close
     >
       <el-form :model="form" label-width="80px" label-position="top">
-        <el-form-item label="症状表情">
-          <div class="emoji-picker">
+        <!-- 快捷症状 -->
+        <el-form-item label="快捷选择">
+          <div class="quick-symptoms">
             <div 
-              v-for="emoji in commonEmojis"
-              :key="emoji"
-              class="emoji-item"
-              :class="{ active: form.symptom_emoji === emoji }"
-              @click="form.symptom_emoji = emoji"
+              v-for="qs in quickSymptoms"
+              :key="qs.text"
+              class="quick-symptom-tag"
+              :class="{ active: form.symptom_text === qs.text && form.symptom_emoji === qs.emoji }"
+              @click="applyQuickSymptom(qs)"
             >
-              {{ emoji }}
+              <span class="qs-emoji">{{ qs.emoji }}</span>
+              <span class="qs-text">{{ qs.text }}</span>
             </div>
           </div>
-          <el-input v-model="form.symptom_emoji" placeholder="或者输入其他表情符号" style="margin-top: 10px">
+        </el-form-item>
+
+        <!-- 分类表情选择 -->
+        <el-form-item label="症状表情">
+          <div class="emoji-category-tabs">
+            <span 
+              v-for="(cat, idx) in emojiCategories"
+              :key="cat.label"
+              class="emoji-tab"
+              :class="{ active: activeEmojiCategory === idx }"
+              @click="activeEmojiCategory = idx"
+            >{{ cat.label }}</span>
+          </div>
+          <div class="emoji-picker">
+            <div 
+              v-for="item in emojiCategories[activeEmojiCategory].emojis"
+              :key="item.emoji"
+              class="emoji-item"
+              :class="{ active: form.symptom_emoji === item.emoji }"
+              @click="selectEmoji(item.emoji, item.desc)"
+              :title="item.desc"
+            >
+              <span class="emoji-char">{{ item.emoji }}</span>
+              <span class="emoji-label">{{ item.desc }}</span>
+            </div>
+          </div>
+          <el-input v-model="form.symptom_emoji" placeholder="或者输入其他表情符号" style="margin-top: 10px" size="small">
             <template #prepend>当前选择</template>
           </el-input>
         </el-form-item>
@@ -204,15 +234,18 @@
           />
         </el-form-item>
         
-        <el-form-item label="症状强度 (1-5分)">
-          <div class="intensity-slider">
-            <el-rate 
-              v-model="form.intensity" 
-              show-score 
-              :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
-              score-template="{value} 分"
-            />
-            <span class="intensity-desc">{{ getIntensityDesc(form.intensity) }}</span>
+        <el-form-item label="不适程度">
+          <div class="intensity-selector">
+            <div 
+              v-for="level in 5"
+              :key="level"
+              class="intensity-level"
+              :class="{ active: form.intensity === level, [`level-${level}`]: true }"
+              @click="form.intensity = level"
+            >
+              <span class="intensity-icon">{{ getIntensityIcon(level) }}</span>
+              <span class="intensity-label">{{ getIntensityDesc(level) }}</span>
+            </div>
           </div>
         </el-form-item>
       </el-form>
@@ -243,13 +276,110 @@ const dateRange = ref<[Date, Date]>()
 const minIntensity = ref(0)
 const timelineDays = ref(7)
 
-const commonEmojis = ['😊', '😷', '🤒', '🤕', '😴', '😖', '🤢', '🤧', '💊', '🏥', '🤮', '🥶', '🥵', '😵', '🤯']
+// 按症状类型分组的表情
+const emojiCategories = [
+  {
+    label: '疼痛类',
+    emojis: [
+      { emoji: '🤕', desc: '头痛' },
+      { emoji: '💥', desc: '偏头痛' },
+      { emoji: '😣', desc: '腹痛' },
+      { emoji: '🦴', desc: '关节痛' },
+      { emoji: '🦷', desc: '牙痛' },
+      { emoji: '👁️', desc: '眼痛' },
+      { emoji: '🫁', desc: '胸闷' },
+    ]
+  },
+  {
+    label: '消化类',
+    emojis: [
+      { emoji: '🤢', desc: '恶心' },
+      { emoji: '🤮', desc: '呕吐' },
+      { emoji: '😖', desc: '腹胀' },
+      { emoji: '💩', desc: '腹泻' },
+      { emoji: '😫', desc: '便秘' },
+      { emoji: '🍽️', desc: '食欲不振' },
+    ]
+  },
+  {
+    label: '全身类',
+    emojis: [
+      { emoji: '🤒', desc: '发热' },
+      { emoji: '🥶', desc: '发冷/畏寒' },
+      { emoji: '🥵', desc: '潮热/出汗' },
+      { emoji: '😵‍💫', desc: '头晕' },
+      { emoji: '🥱', desc: '乏力/疲劳' },
+      { emoji: '😴', desc: '失眠/嗜睡' },
+      { emoji: '💪', desc: '肌肉酸痛' },
+    ]
+  },
+  {
+    label: '呼吸/五官类',
+    emojis: [
+      { emoji: '🤧', desc: '打喷嚏/流涕' },
+      { emoji: '😷', desc: '咳嗽' },
+      { emoji: '😮‍💨', desc: '气短/呼吸困难' },
+      { emoji: '👃', desc: '鼻塞' },
+      { emoji: '👂', desc: '耳鸣' },
+      { emoji: '🗣️', desc: '咽喉痛' },
+    ]
+  },
+  {
+    label: '皮肤/过敏类',
+    emojis: [
+      { emoji: '🫠', desc: '皮疹/红肿' },
+      { emoji: '🤡', desc: '面部浮肿' },
+      { emoji: '💧', desc: '水肿' },
+      { emoji: '🔴', desc: '过敏反应' },
+    ]
+  },
+  {
+    label: '情绪/精神类',
+    emojis: [
+      { emoji: '😰', desc: '焦虑/紧张' },
+      { emoji: '😢', desc: '情绪低落' },
+      { emoji: '🤯', desc: '烦躁/易怒' },
+      { emoji: '😶‍🌫️', desc: '注意力不集中' },
+      { emoji: '😊', desc: '感觉好转' },
+    ]
+  }
+]
+
+// 快捷症状模板 - 点击直接填充表情+描述
+const quickSymptoms = [
+  { emoji: '🤒', text: '发热', intensity: 3 },
+  { emoji: '🤕', text: '头痛', intensity: 3 },
+  { emoji: '😵‍💫', text: '头晕', intensity: 2 },
+  { emoji: '🤮', text: '呕吐', intensity: 4 },
+  { emoji: '😴', text: '失眠', intensity: 3 },
+  { emoji: '🤧', text: '流涕/鼻塞', intensity: 2 },
+  { emoji: '😷', text: '咳嗽', intensity: 2 },
+  { emoji: '🤢', text: '恶心', intensity: 3 },
+  { emoji: '😣', text: '腹痛', intensity: 3 },
+  { emoji: '🥱', text: '乏力', intensity: 2 },
+]
+
+const activeEmojiCategory = ref(0)
 
 const form = reactive({
   symptom_emoji: '',
   symptom_text: '',
   intensity: 3
 })
+
+function applyQuickSymptom(qs: { emoji: string; text: string; intensity: number }) {
+  form.symptom_emoji = qs.emoji
+  form.symptom_text = qs.text
+  form.intensity = qs.intensity
+}
+
+function selectEmoji(emoji: string, desc: string) {
+  form.symptom_emoji = emoji
+  // 如果描述为空，自动填入症状名称
+  if (!form.symptom_text) {
+    form.symptom_text = desc
+  }
+}
 
 onMounted(async () => {
   await fetchTodaySymptoms()
@@ -394,11 +524,22 @@ function getTimelineIcon(intensity: number) {
 
 function getIntensityDesc(intensity: number) {
   const map: Record<number, string> = {
-    1: '轻微不适',
-    2: '有些不舒服',
+    1: '轻微',
+    2: '有点不适',
     3: '明显不适',
     4: '很难受',
     5: '非常痛苦'
+  }
+  return map[intensity] || ''
+}
+
+function getIntensityIcon(intensity: number) {
+  const map: Record<number, string> = {
+    1: '😌',
+    2: '😐',
+    3: '😟',
+    4: '😣',
+    5: '😫'
   }
   return map[intensity] || ''
 }
@@ -631,33 +772,218 @@ function resetForm() {
 }
 
 /* Emoji Picker */
+.emoji-category-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.emoji-tab {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  background: #f3f4f6;
+  color: var(--color-text-secondary);
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.emoji-tab:hover {
+  background: #e5e7eb;
+}
+
+.emoji-tab.active {
+  background: var(--color-primary);
+  color: white;
+}
+
 .emoji-picker {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 6px;
   padding: 12px;
   background: #f9fafb;
   border-radius: 8px;
 }
 
 .emoji-item {
-  font-size: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
+  padding: 6px 8px;
+  border-radius: 8px;
   transition: all 0.2s;
+  min-width: 56px;
 }
 
 .emoji-item:hover {
   background: white;
-  transform: scale(1.2);
+  transform: scale(1.05);
   box-shadow: var(--shadow-sm);
 }
 
 .emoji-item.active {
   background: var(--color-primary-light);
-  color: white;
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+.emoji-char {
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.emoji-label {
+  font-size: 10px;
+  color: var(--color-text-light);
+  white-space: nowrap;
+}
+
+.emoji-item.active .emoji-label {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+/* Quick Symptoms */
+.quick-symptoms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.quick-symptom-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 16px;
+  background: #f3f4f6;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+  border: 1px solid transparent;
+}
+
+.quick-symptom-tag:hover {
+  background: #e5e7eb;
+  transform: translateY(-1px);
+}
+
+.quick-symptom-tag.active {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+.qs-emoji {
+  font-size: 16px;
+}
+
+.qs-text {
+  font-size: 13px;
+  color: var(--color-text-main);
+}
+
+/* Intensity Selector */
+.intensity-selector {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.intensity-level {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid transparent;
+  background: #f9fafb;
+  user-select: none;
+}
+
+.intensity-level:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.intensity-level.active.level-1 {
+  border-color: #67c23a;
+  background: #f0f9eb;
+}
+
+.intensity-level.active.level-2 {
+  border-color: #a0d911;
+  background: #fcffe6;
+}
+
+.intensity-level.active.level-3 {
+  border-color: #e6a23c;
+  background: #fdf6ec;
+}
+
+.intensity-level.active.level-4 {
+  border-color: #f56c6c;
+  background: #fef0f0;
+}
+
+.intensity-level.active.level-5 {
+  border-color: #d32029;
+  background: #fff1f0;
+}
+
+.intensity-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.intensity-label {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.intensity-level.active .intensity-label {
+  font-weight: 600;
+}
+
+/* Symptom intensity display in cards */
+.symptom-intensity-display {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.intensity-face {
+  font-size: 18px;
+}
+
+.intensity-text-inline {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+/* Table intensity display */
+.table-intensity {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.table-intensity-icon {
+  font-size: 18px;
+}
+
+.table-intensity-text {
+  font-size: 13px;
+  color: var(--color-text-secondary);
 }
 
 .intensity-slider {

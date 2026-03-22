@@ -43,6 +43,26 @@
                 @keyup.enter="handleLogin"
               />
             </el-form-item>
+            <el-form-item prop="captchaCode">
+              <div style="display: flex; gap: 12px; width: 100%;">
+                <el-input
+                  v-model="loginForm.captchaCode"
+                  placeholder="请输入验证码"
+                  prefix-icon="Key"
+                  size="large"
+                  style="flex: 1;"
+                  maxlength="4"
+                  @keyup.enter="handleLogin"
+                />
+                <img
+                  :src="loginCaptchaUrl"
+                  alt="验证码"
+                  style="height: 40px; border-radius: 8px; cursor: pointer; border: 1px solid #dcdfe6;"
+                  title="点击刷新验证码"
+                  @click="refreshLoginCaptcha"
+                />
+              </div>
+            </el-form-item>
             <el-form-item>
               <el-button 
                 type="primary" 
@@ -96,6 +116,25 @@
                 size="large"
               />
             </el-form-item>
+            <el-form-item prop="captchaCode">
+              <div style="display: flex; gap: 12px; width: 100%;">
+                <el-input
+                  v-model="registerForm.captchaCode"
+                  placeholder="请输入验证码"
+                  prefix-icon="Key"
+                  size="large"
+                  style="flex: 1;"
+                  maxlength="4"
+                />
+                <img
+                  :src="registerCaptchaUrl"
+                  alt="验证码"
+                  style="height: 40px; border-radius: 8px; cursor: pointer; border: 1px solid #dcdfe6;"
+                  title="点击刷新验证码"
+                  @click="refreshRegisterCaptcha"
+                />
+              </div>
+            </el-form-item>
             <el-form-item>
               <el-button 
                 type="success" 
@@ -121,11 +160,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
-import { User, Lock, Message } from '@element-plus/icons-vue'
+import { authAPI } from '@/api'
+import { User, Lock, Message, Key } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -135,21 +175,30 @@ const loading = ref(false)
 const loginFormRef = ref()
 const registerFormRef = ref()
 
+// 验证码状态
+const loginCaptchaId = ref('')
+const loginCaptchaUrl = ref('')
+const registerCaptchaId = ref('')
+const registerCaptchaUrl = ref('')
+
 const loginForm = reactive({
   username: '',
-  password: ''
+  password: '',
+  captchaCode: ''
 })
 
 const registerForm = reactive({
   username: '',
   email: '',
   password: '',
-  confirmPassword: ''
+  confirmPassword: '',
+  captchaCode: ''
 })
 
 const loginRules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+  captchaCode: [{ required: true, message: '请输入验证码', trigger: 'blur' }]
 }
 
 const registerRules = {
@@ -178,7 +227,8 @@ const registerRules = {
       },
       trigger: 'blur'
     }
-  ]
+  ],
+  captchaCode: [{ required: true, message: '请输入验证码', trigger: 'blur' }]
 }
 
 async function handleLogin() {
@@ -186,12 +236,19 @@ async function handleLogin() {
     if (valid) {
       loading.value = true
       try {
-        await userStore.login(loginForm.username, loginForm.password)
+        await userStore.login(loginForm.username, loginForm.password, loginCaptchaId.value, loginForm.captchaCode)
         ElMessage.success('登录成功')
         router.push('/')
       } catch (error: any) {
+        // 登录失败后刷新验证码
+        refreshLoginCaptcha()
+        loginForm.captchaCode = ''
+
+        // 检查是否是验证码错误
+        if (error.response?.status === 400 && error.response?.data?.detail?.includes('验证码')) {
+          ElMessage.warning(error.response.data.detail)
         // 检查是否是账号被禁用
-        if (error.response?.status === 403) {
+        } else if (error.response?.status === 403) {
           ElMessage({
             type: 'error',
             message: error.response?.data?.detail || '该账号已被禁用，请联系管理员',
@@ -235,13 +292,18 @@ async function handleRegister() {
         await userStore.register({
           username: registerForm.username,
           password: registerForm.password,
-          email: registerForm.email || undefined
+          email: registerForm.email || undefined,
+          captcha_id: registerCaptchaId.value,
+          captcha_code: registerForm.captchaCode
         })
         ElMessage.success('注册成功，请登录')
         activeTab.value = 'login'
         loginForm.username = registerForm.username
       } catch (error: any) {
-        // 显示后端返回的具体错误信息
+        // 注册失败后刷新验证码
+        refreshRegisterCaptcha()
+        registerForm.captchaCode = ''
+
         const errorMsg = error.response?.data?.detail || '注册失败，请稍后重试'
         ElMessage.error(errorMsg)
       } finally {
@@ -250,6 +312,32 @@ async function handleRegister() {
     }
   })
 }
+
+// 验证码刷新
+async function refreshLoginCaptcha() {
+  try {
+    const { captchaId, imageUrl } = await authAPI.getCaptcha()
+    loginCaptchaId.value = captchaId
+    loginCaptchaUrl.value = imageUrl
+  } catch {
+    console.error('获取登录验证码失败')
+  }
+}
+
+async function refreshRegisterCaptcha() {
+  try {
+    const { captchaId, imageUrl } = await authAPI.getCaptcha()
+    registerCaptchaId.value = captchaId
+    registerCaptchaUrl.value = imageUrl
+  } catch {
+    console.error('获取注册验证码失败')
+  }
+}
+
+onMounted(() => {
+  refreshLoginCaptcha()
+  refreshRegisterCaptcha()
+})
 </script>
 
 <style scoped>

@@ -1,17 +1,27 @@
 /**
  * API 服务入口
  */
+import axios from 'axios'
 import service from './config'
+import { API_BASE_URL } from './config'
 
 // 认证相关
 export const authAPI = {
+  // 获取验证码图片（需要拿到响应头中的 captcha_id，所以用原始 axios）
+  getCaptcha: async (): Promise<{ captchaId: string; imageUrl: string }> => {
+    const res = await axios.get(`${API_BASE_URL}/auth/captcha`, { responseType: 'blob' })
+    const captchaId = res.headers['x-captcha-id']
+    const imageUrl = URL.createObjectURL(res.data)
+    return { captchaId, imageUrl }
+  },
+
   // 用户注册
-  register: (data: { username: string; password: string; email?: string }) =>
+  register: (data: { username: string; password: string; email?: string; captcha_id?: string; captcha_code?: string }) =>
     service.post('/auth/register', data),
   
   // 用户登录
-  login: (username: string, password: string) =>
-    service.post('/auth/login', new URLSearchParams({ username, password }), {
+  login: (username: string, password: string, captchaId: string, captchaCode: string) =>
+    service.post('/auth/login', new URLSearchParams({ username, password, captcha_id: captchaId, captcha_code: captchaCode }), {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     }),
   

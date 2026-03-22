@@ -3,7 +3,8 @@
 """
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Form
+from fastapi.responses import Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -15,15 +16,39 @@ from app.schemas.schemas import (
 from app.auth import (
     get_password_hash, authenticate_user, create_access_token, get_current_user
 )
+from app.captcha import generate_captcha, verify_captcha
 from app.config import settings
 
 router = APIRouter(prefix="/api/users", tags=["用户管理"])
 auth_router = APIRouter(prefix="/api/auth", tags=["认证"])
 
 
+@auth_router.get("/captcha")
+async def get_captcha():
+    """获取图形验证码"""
+    captcha_id, image_bytes = generate_captcha()
+    return Response(
+        content=image_bytes,
+        media_type="image/png",
+        headers={"X-Captcha-Id": captcha_id},
+    )
+
+
 @auth_router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register(user: UserCreate, db: Session = Depends(get_db)):
     """用户注册"""
+    # 验证码校验
+    if not user.captcha_id or not user.captcha_code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="请输入验证码",
+        )
+    if not verify_captcha(user.captcha_id, user.captcha_code):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="验证码错误或已过期",
+        )
+
     # 检查用户名是否已存在
     existing_user = db.query(User).filter(User.username == user.username).first()
     if existing_user:
@@ -58,9 +83,23 @@ async def register(user: UserCreate, db: Session = Depends(get_db)):
 @auth_router.post("/login", response_model=Token)
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
+    captcha_id: str = Form(""),
+    captcha_code: str = Form(""),
     db: Session = Depends(get_db)
 ):
     """用户登录"""
+    # 验证码校验
+    if not captcha_id or not captcha_code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="请输入验证码",
+        )
+    if not verify_captcha(captcha_id, captcha_code):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="验证码错误或已过期",
+        )
+
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(

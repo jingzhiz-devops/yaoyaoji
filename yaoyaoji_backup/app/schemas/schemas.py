@@ -29,6 +29,8 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     """用户创建Schema"""
     password: str = Field(..., min_length=6, max_length=50, description="密码")
+    captcha_id: Optional[str] = Field(None, description="验证码ID")
+    captcha_code: Optional[str] = Field(None, description="验证码")
 
 
 class UserLogin(BaseModel):
