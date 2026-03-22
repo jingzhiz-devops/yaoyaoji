@@ -135,6 +135,7 @@
                 <div v-if="plan.last_followup_date">上次随访: {{ formatDate(plan.last_followup_date) }}</div>
                 <div v-if="plan.responsible_doctor">医生: {{ plan.responsible_doctor }}</div>
                 <div>提前 {{ plan.reminder_days }} 天提醒</div>
+                <div v-if="plan.notes" class="plan-notes">📝 {{ plan.notes }}</div>
               </div>
               <div class="plan-actions">
                 <el-button size="small" type="primary" @click="editPlan(plan)">编辑</el-button>
@@ -226,7 +227,7 @@
 
     <!-- 随访计划对话框 -->
     <el-dialog v-model="planDialogVisible" :title="editingPlanId ? '编辑随访计划' : '创建随访计划'" width="600px">
-      <el-form :model="planForm" label-width="100px">
+      <el-form :model="planForm" label-width="120px">
         <el-form-item label="随访频率" required>
           <el-select v-model="planForm.frequency" placeholder="请选择频率" style="width: 100%">
             <el-option label="每周" value="weekly" />
@@ -244,6 +245,9 @@
         </el-form-item>
         <el-form-item label="提前提醒天数">
           <el-input-number v-model="planForm.reminder_days" :min="1" :max="30" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="planForm.notes" type="textarea" :rows="2" placeholder="如随访地址、注意事项等" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -277,7 +281,7 @@ const router = useRouter()
 
 const disease = ref<ChronicDisease | null>(null)
 const indicatorRecords = ref<IndicatorRecord[]>([])
-const activeTab = ref('indicators')
+const activeTab = ref((route.query.tab as string) || 'indicators')
 const editDialogVisible = ref(false)
 const showExport = ref(false)
 
@@ -288,7 +292,8 @@ const planForm = reactive({
   frequency: '',
   next_followup_date: '',
   responsible_doctor: '',
-  reminder_days: 7
+  reminder_days: 7,
+  notes: ''
 })
 
 const editForm = ref({
@@ -635,6 +640,7 @@ const resetPlanForm = () => {
   planForm.next_followup_date = ''
   planForm.responsible_doctor = ''
   planForm.reminder_days = 7
+  planForm.notes = ''
 }
 
 const openCreatePlan = () => {
@@ -648,6 +654,7 @@ const editPlan = (plan: any) => {
   planForm.next_followup_date = plan.next_followup_date
   planForm.responsible_doctor = plan.responsible_doctor || ''
   planForm.reminder_days = plan.reminder_days ?? 7
+  planForm.notes = plan.notes || ''
   planDialogVisible.value = true
 }
 
@@ -660,7 +667,8 @@ const savePlan = async () => {
     frequency: planForm.frequency,
     next_followup_date: dayjs(planForm.next_followup_date).format('YYYY-MM-DD'),
     responsible_doctor: planForm.responsible_doctor || null,
-    reminder_days: planForm.reminder_days
+    reminder_days: planForm.reminder_days,
+    notes: planForm.notes || null
   }
   try {
     if (editingPlanId.value) {

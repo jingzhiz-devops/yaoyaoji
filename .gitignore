@@ -2,6 +2,8 @@
 .env
 .env.local
 .env.*.local
+.qoder
+.kiro
 
 # Python
 __pycache__/

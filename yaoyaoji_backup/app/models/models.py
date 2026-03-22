@@ -22,9 +22,12 @@ class User(Base):
     birth_date = Column(Date, nullable=True)  # 出生日期
     member_notes = Column(Text, nullable=True)  # 成员备注
     relation_to_admin = Column(String(50), nullable=True)  # 与管理员的关系（父亲、母亲、配偶等）
+    is_admin = Column(Boolean, default=False, index=True)  # 是否管理员
+    is_active = Column(Boolean, default=True, index=True)  # 账号是否启用
     is_family_admin = Column(Boolean, default=True)  # 是否家庭管理员
     family_id = Column(Integer, ForeignKey("families.id"), nullable=True)  # 所属家庭
     created_at = Column(DateTime, default=datetime.now)
+    last_login = Column(DateTime, nullable=True)  # 最后登录时间
     
     # 关系
     user_medications = relationship("UserMedication", back_populates="user")
@@ -480,6 +483,7 @@ class FollowupPlan(Base):
     target_values = Column(JSON, nullable=True)  # {"血压": "<140/90", "血糖": "<7.0"}
     
     reminder_days = Column(Integer, default=7)  # 提前几天提醒
+    notes = Column(Text, nullable=True)  # 备注（如随访地址等）
     
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)

@@ -7,6 +7,29 @@
         </h1>
         <p class="welcome-subtitle">祝您身体健康，爱自己，笑口常开！</p>
       </div>
+      <!-- 提醒推送区域 -->
+      <div class="reminder-widget">
+        <div class="reminder-scroll" v-if="reminderItems.length > 0">
+          <div 
+            v-for="item in reminderItems" 
+            :key="item.key" 
+            class="reminder-item" 
+            :class="item.type"
+            @click="handleReminderClick(item)"
+          >
+            <span class="reminder-icon">{{ item.icon }}</span>
+            <div class="reminder-text">
+              <span class="reminder-title">{{ item.title }}</span>
+              <span class="reminder-desc">{{ item.desc }}</span>
+            </div>
+            <el-tag :type="item.tagType" size="small" effect="light" round>{{ item.tag }}</el-tag>
+          </div>
+        </div>
+        <div v-else class="reminder-empty">
+          <span>✅ 暂无待办提醒</span>
+        </div>
+      </div>
+
       <div class="calendar-widget">
         <div class="calendar-date">
           <div class="calendar-day">{{ currentDay }}</div>
@@ -341,9 +364,11 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useMedicationStore } from '@/stores/medication'
 import { useUserStore } from '@/stores/user'
 import { scheduleAPI, symptomAPI, recordAPI, healthProfileAPI, familyAPI } from '@/api'
+import { chronicDiseaseAPI, medicationReminderAPI } from '@/api/chronic-disease'
 import { 
   Box, AlarmClock, Calendar, Notebook, Timer, UserFilled, 
-  DataLine, Files, DocumentChecked, KnifeFork, Delete 
+  DataLine, Files, DocumentChecked, KnifeFork, Delete,
+  ArrowDown, User, SwitchButton
 } from '@element-plus/icons-vue'
 import { Lunar, Solar } from 'lunar-javascript'
 
@@ -361,6 +386,96 @@ const allergies = ref<any[]>([])
 const familyHistories = ref<any[]>([])
 const surgeries = ref<any[]>([])
 const checkups = ref<any[]>([])
+
+// 提醒数据
+const medicationReminders = ref<any[]>([])
+const followupPlans = ref<any[]>([])
+
+interface ReminderItem {
+  key: string
+  type: 'medication' | 'followup'
+  icon: string
+  title: string
+  desc: string
+  tag: string
+  tagType: 'success' | 'warning' | 'danger' | 'info'
+  link?: string
+}
+
+const reminderItems = computed<ReminderItem[]>(() => {
+  const items: ReminderItem[] = []
+  const now = new Date()
+  const currentTime = now.getHours() * 60 + now.getMinutes()
+  const todayDay = now.getDay() // 0=周日
+
+  // 用药提醒：今天需要提醒的
+  medicationReminders.value.forEach(r => {
+    if (r.status !== 'active') return
+    const days: number[] = r.reminder_days || []
+    if (!days.includes(todayDay)) return
+    const time = r.reminder_time?.substring(0, 5) || ''
+    const [h, m] = time.split(':').map(Number)
+    const reminderTime = h * 60 + m
+    // 显示还没过的和过了不超过60分钟的
+    if (currentTime - reminderTime > 60) return
+    const isPast = reminderTime <= currentTime
+    items.push({
+      key: `med-${r.id}`,
+      type: 'medication',
+      icon: '💊',
+      title: `用药提醒`,
+      desc: `${time} 服药`,
+      tag: isPast ? '请尽快服药' : `${time}`,
+      tagType: isPast ? 'danger' : 'warning',
+      link: '/schedules'
+    })
+  })
+
+  // 随访提醒
+  followupPlans.value.forEach(plan => {
+    if (!plan.next_followup_date) return
+    const nextDate = new Date(plan.next_followup_date)
+    nextDate.setHours(0, 0, 0, 0)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const diffDays = Math.floor((nextDate.getTime() - today.getTime()) / 86400000)
+    const reminderDays = plan.reminder_days || 7
+
+    if (diffDays > reminderDays) return // 还没到提醒窗口
+    
+    let tag = ''
+    let tagType: ReminderItem['tagType'] = 'info'
+    if (diffDays < 0) {
+      tag = `已过期${Math.abs(diffDays)}天`
+      tagType = 'danger'
+    } else if (diffDays === 0) {
+      tag = '今天'
+      tagType = 'danger'
+    } else if (diffDays <= 3) {
+      tag = `${diffDays}天后`
+      tagType = 'warning'
+    } else {
+      tag = `${diffDays}天后`
+      tagType = 'info'
+    }
+
+    items.push({
+      key: `followup-${plan.id}`,
+      type: 'followup',
+      icon: '🏥',
+      title: `随访计划：${plan.disease_name || '随访'}`,
+      desc: plan.responsible_doctor ? `医生: ${plan.responsible_doctor}` : plan.frequency || '',
+      tag,
+      tagType,
+      link: plan.disease_id ? `/chronic-disease/${plan.disease_id}?tab=followup` : '/chronic-disease'
+    })
+  })
+
+  // 按紧急程度排序：danger > warning > info > success
+  const priority: Record<string, number> = { danger: 0, warning: 1, info: 2, success: 3 }
+  items.sort((a, b) => (priority[a.tagType] ?? 9) - (priority[b.tagType] ?? 9))
+  return items
+})
 
 // 日历数据
 const now = new Date()
@@ -509,7 +624,9 @@ onMounted(async () => {
     fetchFamilyHistories(),
     fetchSurgeries(),
     fetchCheckups(),
-    fetchFamilyMembers()
+    fetchFamilyMembers(),
+    fetchMedicationReminders(),
+    fetchFollowupPlans()
   ])
 })
 
@@ -633,6 +750,41 @@ async function fetchFamilyMembers() {
     console.error('获取家庭成员用药信息失败:', error)
     familyMembers.value = []
   }
+}
+
+async function fetchMedicationReminders() {
+  try {
+    const data: any = await medicationReminderAPI.list({ status: 'active' })
+    medicationReminders.value = Array.isArray(data) ? data : []
+  } catch (error) {
+    console.error('获取用药提醒失败:', error)
+  }
+}
+
+async function fetchFollowupPlans() {
+  try {
+    const diseases: any = await chronicDiseaseAPI.list()
+    const diseaseList = Array.isArray(diseases) ? diseases : (diseases?.data || [])
+    const allPlans: any[] = []
+    for (const disease of diseaseList) {
+      try {
+        const plans: any = await chronicDiseaseAPI.followupPlans.list(disease.id)
+        const planList = Array.isArray(plans) ? plans : (plans?.data || [])
+        planList.forEach((p: any) => {
+          p.disease_name = disease.disease_name
+          p.disease_id = disease.id
+        })
+        allPlans.push(...planList)
+      } catch { /* skip */ }
+    }
+    followupPlans.value = allPlans
+  } catch (error) {
+    console.error('获取随访计划失败:', error)
+  }
+}
+
+function handleReminderClick(item: ReminderItem) {
+  if (item.link) router.push(item.link)
 }
 
 function getTimeStatus(timeStr: string): string {
@@ -1310,6 +1462,91 @@ async function handleSwitchToMember(member: any) {
   color: var(--color-text-light);
   font-size: 13px;
   padding: 20px 0;
+}
+
+/* Reminder Widget */
+.reminder-widget {
+  position: relative;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  flex: 1;
+  min-width: 0;
+  max-height: 160px;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.reminder-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reminder-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.reminder-item:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.reminder-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.reminder-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.reminder-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reminder-desc {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.75);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reminder-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 60px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+}
+
+.reminder-widget::-webkit-scrollbar {
+  width: 4px;
+}
+
+.reminder-widget::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
 }
 </style>
 

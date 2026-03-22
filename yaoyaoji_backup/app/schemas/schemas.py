@@ -43,9 +43,11 @@ class UserResponse(UserBase):
     avatar: Optional[str] = None
     birth_date: Optional[date] = None
     real_name: Optional[str] = None
+    is_admin: bool = False  # 是否管理员
+    is_active: bool = True  # 账号是否启用
     is_family_admin: bool = True  # 是否家庭管理员
     relation_to_admin: Optional[str] = None  # 与管理员的关系（角色）：parent/child/elderly/spouse/other/admin/member
-    created_at: datetime
+    created_at: Optional[datetime] = None
     
     class Config:
         from_attributes = True
@@ -545,6 +547,7 @@ class FollowupPlanBase(BaseModel):
     followup_checklist: Optional[dict] = Field(None, description="随访下拉列表")
     target_values: Optional[dict] = Field(None, description="目标值")
     reminder_days: int = Field(7, description="提前提醒天数")
+    notes: Optional[str] = Field(None, description="备注（如随访地址等）")
 
 
 class FollowupPlanCreate(FollowupPlanBase):

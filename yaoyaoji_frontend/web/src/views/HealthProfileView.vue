@@ -1,118 +1,202 @@
 <template>
   <div class="health-profile-container">
+    <!-- 页面标题 -->
+    <div class="page-hero">
+      <div class="hero-icon">🏥</div>
+      <div class="hero-text">
+        <h2>健康档案</h2>
+        <p>记录并管理您的个人健康信息</p>
+      </div>
+    </div>
+
     <div class="profile-content">
-      <el-tabs v-model="activeTab" class="custom-tabs" type="border-card">
+      <el-tabs v-model="activeTab" class="custom-tabs">
         <!-- 基本信息 -->
         <el-tab-pane name="basic">
           <template #label>
             <span class="tab-label"><el-icon><User /></el-icon> 基本信息</span>
           </template>
-          
+
           <div class="tab-pane-content">
-            <div class="section-header">
-              <h3>基本健康信息</h3>
-              <el-button type="primary" @click="saveBasicInfo" :loading="saving">保存修改</el-button>
+            <!-- 健康指标卡片区 -->
+            <div class="metrics-grid">
+              <div class="metric-card metric-bmi" :class="'bmi-' + getBMIType(bmi)">
+                <div class="metric-icon">⚖️</div>
+                <div class="metric-body">
+                  <div class="metric-value">{{ bmi !== '-' ? bmi : '--' }}</div>
+                  <div class="metric-label">BMI 指数</div>
+                  <div class="metric-status" v-if="bmi !== '-'">{{ getBMIStatus(bmi) }}</div>
+                </div>
+              </div>
+              <div class="metric-card metric-heart">
+                <div class="metric-icon">❤️</div>
+                <div class="metric-body">
+                  <div class="metric-value">{{ basicInfo.heart_rate || '--' }}</div>
+                  <div class="metric-label">心率 <span class="metric-unit">次/分</span></div>
+                </div>
+              </div>
+              <div class="metric-card metric-pressure">
+                <div class="metric-icon">🩺</div>
+                <div class="metric-body">
+                  <div class="metric-value">
+                    {{ basicInfo.systolic_pressure || '--' }}<span class="metric-sep">/</span>{{ basicInfo.diastolic_pressure || '--' }}
+                  </div>
+                  <div class="metric-label">血压 <span class="metric-unit">mmHg</span></div>
+                </div>
+              </div>
+              <div class="metric-card metric-glucose">
+                <div class="metric-icon">🩸</div>
+                <div class="metric-body">
+                  <div class="metric-value">{{ basicInfo.blood_glucose || '--' }}</div>
+                  <div class="metric-label">血糖 <span class="metric-unit">mmol/L</span></div>
+                </div>
+              </div>
+              <div class="metric-card metric-temp">
+                <div class="metric-icon">🌡️</div>
+                <div class="metric-body">
+                  <div class="metric-value">{{ basicInfo.temperature || '--' }}</div>
+                  <div class="metric-label">体温 <span class="metric-unit">℃</span></div>
+                </div>
+              </div>
             </div>
-            
-            <el-form :model="basicInfo" label-width="100px" label-position="top" class="custom-form">
-              <el-row :gutter="24">
-                <el-col :span="8">
-                  <el-form-item label="真实姓名">
-                    <el-input v-model="basicInfo.real_name" placeholder="请输入真实姓名" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="8">
-                  <el-form-item label="出生日期">
-                    <el-date-picker v-model="basicInfo.birth_date" type="date" placeholder="选择日期" style="width: 100%" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="8">
-                  <el-form-item label="年龄">
-                    <el-input :value="age" disabled />
-                  </el-form-item>
-                </el-col>
-              </el-row>
 
-              <el-row :gutter="24">
-                <el-col :span="8">
-                  <el-form-item label="血型">
-                    <el-select v-model="basicInfo.blood_type" placeholder="请选择血型" clearable style="width: 100%">
-                      <el-option label="A型" value="A" />
-                      <el-option label="B型" value="B" />
-                      <el-option label="AB型" value="AB" />
-                      <el-option label="O型" value="O" />
-                      <el-option label="未知" value="未知" />
-                    </el-select>
-                  </el-form-item>
-                </el-col>
-                <el-col :span="8">
-                  <el-form-item label="BMI 指数">
-                    <el-input :value="bmi" disabled>
-                      <template #append>
-                        <el-tag size="small" :type="getBMIType(bmi)">{{ getBMIStatus(bmi) }}</el-tag>
-                      </template>
-                    </el-input>
-                  </el-form-item>
-                </el-col>
-                <el-col :span="8">
-                  <el-form-item label="身高 (cm)">
-                    <el-input-number v-model="basicInfo.height" :min="0" :max="300" style="width: 100%;" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="8">
-                  <el-form-item label="体重 (kg)">
-                    <el-input-number v-model="basicInfo.weight" :min="0" :max="500" style="width: 100%;" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="8">
-                  <el-form-item label="心率 (次/分)">
-                    <el-input-number v-model="basicInfo.heart_rate" :min="0" :max="300" style="width: 100%;" />
-                  </el-form-item>
-                </el-col>
-              </el-row>
+            <div class="section-header">
+              <div class="section-title-wrap">
+                <span class="section-dot"></span>
+                <h3>基本健康信息</h3>
+              </div>
+              <el-button type="primary" @click="saveBasicInfo" :loading="saving" round>
+                <el-icon><Check /></el-icon> 保存修改
+              </el-button>
+            </div>
 
-              <el-row :gutter="24">
-                <el-col :span="12">
-                  <el-form-item label="血压 (mmHg)">
-                    <div class="pressure-inputs">
-                      <el-input-number 
-                        v-model="basicInfo.systolic_pressure" 
-                        :min="0" 
-                        :max="300" 
-                        placeholder="收缩压"
-                        style="flex: 1;"
-                      />
-                      <span class="separator">/</span>
-                      <el-input-number 
-                        v-model="basicInfo.diastolic_pressure" 
-                        :min="0" 
-                        :max="200" 
-                        placeholder="舒张压"
-                        style="flex: 1;"
-                      />
+            <el-form :model="basicInfo" label-position="top" class="custom-form">
+              <div class="form-group-card">
+                <div class="form-group-title">个人信息</div>
+                <el-row :gutter="20">
+                  <el-col :xs="24" :sm="8">
+                    <el-form-item label="真实姓名">
+                      <el-input v-model="basicInfo.real_name" placeholder="请输入真实姓名" prefix-icon="User" />
+                    </el-form-item>
+                  </el-col>
+                  <el-col :xs="24" :sm="8">
+                    <el-form-item label="出生日期">
+                      <el-date-picker v-model="basicInfo.birth_date" type="date" placeholder="选择日期" style="width: 100%" />
+                    </el-form-item>
+                  </el-col>
+                  <el-col :xs="24" :sm="4">
+                    <el-form-item label="年龄">
+                      <el-input :value="age !== '-' ? age + ' 岁' : '-'" disabled />
+                    </el-form-item>
+                  </el-col>
+                  <el-col :xs="24" :sm="4">
+                    <el-form-item label="血型">
+                      <el-select v-model="basicInfo.blood_type" placeholder="血型" clearable style="width: 100%">
+                        <el-option label="A型" value="A" />
+                        <el-option label="B型" value="B" />
+                        <el-option label="AB型" value="AB" />
+                        <el-option label="O型" value="O" />
+                        <el-option label="未知" value="未知" />
+                      </el-select>
+                    </el-form-item>
+                  </el-col>
+                </el-row>
+              </div>
+
+              <div class="form-group-card">
+                <div class="form-group-title">体征数据</div>
+                <div class="vital-grid">
+                  <div class="vital-item">
+                    <div class="vital-header">
+                      <span class="vital-emoji">📏</span>
+                      <span class="vital-name">身高</span>
                     </div>
-                  </el-form-item>
-                </el-col>
-                <el-col :span="6">
-                  <el-form-item label="血糖 (mmol/L)">
-                    <el-input v-model="basicInfo.blood_glucose" placeholder="如: 5.6" />
-                  </el-form-item>
-                </el-col>
-                <el-col :span="6">
-                  <el-form-item label="体温 (℃)">
-                    <el-input v-model="basicInfo.temperature" placeholder="如: 36.5" />
-                  </el-form-item>
-                </el-col>
-              </el-row>
+                    <div class="vital-input">
+                      <el-input v-model.number="basicInfo.height" placeholder="--">
+                        <template #suffix><span class="vital-unit">cm</span></template>
+                      </el-input>
+                    </div>
+                  </div>
+                  <div class="vital-item">
+                    <div class="vital-header">
+                      <span class="vital-emoji">⚖️</span>
+                      <span class="vital-name">体重</span>
+                    </div>
+                    <div class="vital-input">
+                      <el-input v-model.number="basicInfo.weight" placeholder="--">
+                        <template #suffix><span class="vital-unit">kg</span></template>
+                      </el-input>
+                    </div>
+                  </div>
+                  <div class="vital-item">
+                    <div class="vital-header">
+                      <span class="vital-emoji">❤️</span>
+                      <span class="vital-name">心率</span>
+                    </div>
+                    <div class="vital-input">
+                      <el-input v-model.number="basicInfo.heart_rate" placeholder="--">
+                        <template #suffix><span class="vital-unit">次/分</span></template>
+                      </el-input>
+                    </div>
+                  </div>
+                  <div class="vital-item">
+                    <div class="vital-header">
+                      <span class="vital-emoji">🌡️</span>
+                      <span class="vital-name">体温</span>
+                    </div>
+                    <div class="vital-input">
+                      <el-input v-model="basicInfo.temperature" placeholder="--">
+                        <template #suffix><span class="vital-unit">℃</span></template>
+                      </el-input>
+                    </div>
+                  </div>
+                  <div class="vital-item">
+                    <div class="vital-header">
+                      <span class="vital-emoji">🩺</span>
+                      <span class="vital-name">血压</span>
+                    </div>
+                    <div class="vital-input vital-bp">
+                      <el-input v-model.number="basicInfo.systolic_pressure" placeholder="收缩压" />
+                      <span class="bp-sep">/</span>
+                      <el-input v-model.number="basicInfo.diastolic_pressure" placeholder="舒张压" />
+                      <span class="vital-unit-inline">mmHg</span>
+                    </div>
+                  </div>
+                  <div class="vital-item">
+                    <div class="vital-header">
+                      <span class="vital-emoji">🩸</span>
+                      <span class="vital-name">血糖</span>
+                    </div>
+                    <div class="vital-input">
+                      <el-input v-model="basicInfo.blood_glucose" placeholder="--">
+                        <template #suffix><span class="vital-unit">mmol/L</span></template>
+                      </el-input>
+                    </div>
+                  </div>
+                  <div class="vital-item vital-item-bmi">
+                    <div class="vital-header">
+                      <span class="vital-emoji">📊</span>
+                      <span class="vital-name">BMI</span>
+                    </div>
+                    <div class="vital-bmi-value">
+                      <span class="bmi-number">{{ bmi }}</span>
+                      <el-tag v-if="bmi !== '-'" :type="getBMIType(bmi)" size="small" round>{{ getBMIStatus(bmi) }}</el-tag>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-              <el-form-item label="慢性疾病">
-                <el-input 
-                  v-model="basicInfo.chronic_diseases" 
-                  type="textarea" 
-                  :rows="3"
-                  placeholder="如：高血压、糖尿病等，多个用逗号分隔"
-                />
-              </el-form-item>
+              <div class="form-group-card">
+                <div class="form-group-title">慢性疾病</div>
+                <el-form-item>
+                  <el-input
+                    v-model="basicInfo.chronic_diseases"
+                    type="textarea"
+                    :rows="3"
+                    placeholder="如：高血压、糖尿病等，多个用逗号分隔"
+                  />
+                </el-form-item>
+              </div>
             </el-form>
           </div>
         </el-tab-pane>
@@ -122,30 +206,39 @@
           <template #label>
             <span class="tab-label"><el-icon><Warning /></el-icon> 过敏史</span>
           </template>
-          
+
           <div class="tab-pane-content">
             <div class="section-header">
-              <h3>过敏史记录</h3>
-              <el-button type="primary" @click="showAllergyDialog">添加记录</el-button>
+              <div class="section-title-wrap">
+                <span class="section-dot dot-warning"></span>
+                <h3>过敏史记录</h3>
+                <el-tag v-if="allergies.length" type="warning" size="small" round>{{ allergies.length }} 条</el-tag>
+              </div>
+              <el-button type="primary" @click="showAllergyDialog" round>
+                <el-icon><Plus /></el-icon> 添加记录
+              </el-button>
             </div>
-            
-            <el-table :data="allergies" stripe class="custom-table">
+
+            <el-empty v-if="!allergies.length" description="暂无过敏记录" :image-size="80">
+              <el-button type="primary" @click="showAllergyDialog" round>添加第一条记录</el-button>
+            </el-empty>
+            <el-table v-else :data="allergies" class="custom-table" row-class-name="table-row">
               <el-table-column prop="allergen" label="过敏原" width="180" />
               <el-table-column prop="allergen_type" label="类型" width="120">
                 <template #default="{ row }">
-                  <el-tag effect="plain">{{ row.allergen_type || '未知' }}</el-tag>
+                  <el-tag effect="plain" size="small">{{ row.allergen_type || '未知' }}</el-tag>
                 </template>
               </el-table-column>
               <el-table-column prop="reaction" label="过敏反应" />
               <el-table-column prop="severity" label="严重程度" width="120">
                 <template #default="{ row }">
-                  <el-tag :type="getSeverityType(row.severity)">{{ row.severity || '未知' }}</el-tag>
+                  <el-tag :type="getSeverityType(row.severity)" size="small" round>{{ row.severity || '未知' }}</el-tag>
                 </template>
               </el-table-column>
               <el-table-column label="操作" width="150" align="center">
                 <template #default="{ row }">
-                  <el-button link type="primary" @click="editAllergy(row)">编辑</el-button>
-                  <el-button link type="danger" @click="deleteAllergy(row.id)">删除</el-button>
+                  <el-button link type="primary" size="small" @click="editAllergy(row)">编辑</el-button>
+                  <el-button link type="danger" size="small" @click="deleteAllergy(row.id)">删除</el-button>
                 </template>
               </el-table-column>
             </el-table>
@@ -157,26 +250,36 @@
           <template #label>
             <span class="tab-label"><el-icon><Connection /></el-icon> 家族病史</span>
           </template>
-          
+
           <div class="tab-pane-content">
             <div class="section-header">
-              <h3>家族病史</h3>
-              <el-button type="primary" @click="showFamilyHistoryDialog">添加病史</el-button>
+              <div class="section-title-wrap">
+                <span class="section-dot dot-purple"></span>
+                <h3>家族病史</h3>
+                <el-tag v-if="familyHistories.length" type="info" size="small" round>{{ familyHistories.length }} 条</el-tag>
+              </div>
+              <el-button type="primary" @click="showFamilyHistoryDialog" round>
+                <el-icon><Plus /></el-icon> 添加病史
+              </el-button>
             </div>
-            
-            <el-table :data="familyHistories" stripe class="custom-table">
+
+            <el-empty v-if="!familyHistories.length" description="暂无家族病史记录" :image-size="80">
+              <el-button type="primary" @click="showFamilyHistoryDialog" round>添加第一条记录</el-button>
+            </el-empty>
+            <el-table v-else :data="familyHistories" class="custom-table" row-class-name="table-row">
               <el-table-column prop="relative" label="亲属关系" width="150" />
               <el-table-column prop="disease" label="疾病" width="200" />
               <el-table-column prop="onset_age" label="发病年龄" width="120">
                 <template #default="{ row }">
-                  {{ row.onset_age ? `${row.onset_age}岁` : '-' }}
+                  <span v-if="row.onset_age" class="age-badge">{{ row.onset_age }} 岁</span>
+                  <span v-else class="text-muted">-</span>
                 </template>
               </el-table-column>
               <el-table-column prop="notes" label="备注" />
               <el-table-column label="操作" width="150" align="center">
                 <template #default="{ row }">
-                  <el-button link type="primary" @click="editFamilyHistory(row)">编辑</el-button>
-                  <el-button link type="danger" @click="deleteFamilyHistory(row.id)">删除</el-button>
+                  <el-button link type="primary" size="small" @click="editFamilyHistory(row)">编辑</el-button>
+                  <el-button link type="danger" size="small" @click="deleteFamilyHistory(row.id)">删除</el-button>
                 </template>
               </el-table-column>
             </el-table>
@@ -188,14 +291,23 @@
           <template #label>
             <span class="tab-label"><el-icon><KnifeFork /></el-icon> 手术记录</span>
           </template>
-          
+
           <div class="tab-pane-content">
             <div class="section-header">
-              <h3>手术记录</h3>
-              <el-button type="primary" @click="showSurgeryDialog">添加记录</el-button>
+              <div class="section-title-wrap">
+                <span class="section-dot dot-red"></span>
+                <h3>手术记录</h3>
+                <el-tag v-if="surgeries.length" type="danger" size="small" round>{{ surgeries.length }} 条</el-tag>
+              </div>
+              <el-button type="primary" @click="showSurgeryDialog" round>
+                <el-icon><Plus /></el-icon> 添加记录
+              </el-button>
             </div>
-            
-            <el-table :data="surgeries" stripe class="custom-table">
+
+            <el-empty v-if="!surgeries.length" description="暂无手术记录" :image-size="80">
+              <el-button type="primary" @click="showSurgeryDialog" round>添加第一条记录</el-button>
+            </el-empty>
+            <el-table v-else :data="surgeries" class="custom-table" row-class-name="table-row">
               <el-table-column prop="surgery_name" label="手术名称" width="200" />
               <el-table-column prop="surgery_date" label="手术日期" width="150" />
               <el-table-column prop="hospital" label="医院" width="200" />
@@ -203,8 +315,8 @@
               <el-table-column prop="notes" label="备注" />
               <el-table-column label="操作" width="150" align="center">
                 <template #default="{ row }">
-                  <el-button link type="primary" @click="editSurgery(row)">编辑</el-button>
-                  <el-button link type="danger" @click="deleteSurgery(row.id)">删除</el-button>
+                  <el-button link type="primary" size="small" @click="editSurgery(row)">编辑</el-button>
+                  <el-button link type="danger" size="small" @click="deleteSurgery(row.id)">删除</el-button>
                 </template>
               </el-table-column>
             </el-table>
@@ -216,22 +328,31 @@
           <template #label>
             <span class="tab-label"><el-icon><DocumentChecked /></el-icon> 体检报告</span>
           </template>
-          
+
           <div class="tab-pane-content">
             <div class="section-header">
-              <h3>体检报告</h3>
-              <el-button type="primary" @click="showCheckupDialog">添加报告</el-button>
+              <div class="section-title-wrap">
+                <span class="section-dot dot-green"></span>
+                <h3>体检报告</h3>
+                <el-tag v-if="checkups.length" type="success" size="small" round>{{ checkups.length }} 条</el-tag>
+              </div>
+              <el-button type="primary" @click="showCheckupDialog" round>
+                <el-icon><Plus /></el-icon> 添加报告
+              </el-button>
             </div>
-            
-            <el-table :data="checkups" stripe class="custom-table">
+
+            <el-empty v-if="!checkups.length" description="暂无体检报告" :image-size="80">
+              <el-button type="primary" @click="showCheckupDialog" round>添加第一条记录</el-button>
+            </el-empty>
+            <el-table v-else :data="checkups" class="custom-table" row-class-name="table-row">
               <el-table-column prop="checkup_date" label="体检日期" width="150" />
               <el-table-column prop="checkup_type" label="体检类型" width="180" />
               <el-table-column prop="hospital" label="医院" width="200" />
               <el-table-column prop="summary" label="总结" show-overflow-tooltip />
               <el-table-column label="操作" width="150" align="center">
                 <template #default="{ row }">
-                  <el-button link type="primary" @click="editCheckup(row)">编辑</el-button>
-                  <el-button link type="danger" @click="deleteCheckup(row.id)">删除</el-button>
+                  <el-button link type="primary" size="small" @click="editCheckup(row)">编辑</el-button>
+                  <el-button link type="danger" size="small" @click="deleteCheckup(row.id)">删除</el-button>
                 </template>
               </el-table-column>
             </el-table>
@@ -243,23 +364,37 @@
           <template #label>
             <span class="tab-label"><el-icon><Aim /></el-icon> 疫苗接种</span>
           </template>
-          
+
           <div class="tab-pane-content">
             <div class="section-header">
-              <h3>疫苗接种记录</h3>
-              <el-button type="primary" @click="showVaccinationDialog">添加记录</el-button>
+              <div class="section-title-wrap">
+                <span class="section-dot dot-blue"></span>
+                <h3>疫苗接种记录</h3>
+                <el-tag v-if="vaccinations.length" type="primary" size="small" round>{{ vaccinations.length }} 条</el-tag>
+              </div>
+              <el-button type="primary" @click="showVaccinationDialog" round>
+                <el-icon><Plus /></el-icon> 添加记录
+              </el-button>
             </div>
-            
-            <el-table :data="vaccinations" stripe class="custom-table">
+
+            <el-empty v-if="!vaccinations.length" description="暂无疫苗接种记录" :image-size="80">
+              <el-button type="primary" @click="showVaccinationDialog" round>添加第一条记录</el-button>
+            </el-empty>
+            <el-table v-else :data="vaccinations" class="custom-table" row-class-name="table-row">
               <el-table-column prop="vaccine_name" label="疫苗名称" width="200" />
               <el-table-column prop="vaccination_date" label="接种日期" width="150" />
               <el-table-column prop="hospital" label="接种地点" width="200" />
               <el-table-column prop="batch_number" label="批次号" width="150" />
-              <el-table-column prop="next_dose_date" label="下次接种" width="150" />
+              <el-table-column prop="next_dose_date" label="下次接种" width="150">
+                <template #default="{ row }">
+                  <span v-if="row.next_dose_date" class="next-dose">{{ row.next_dose_date }}</span>
+                  <span v-else class="text-muted">-</span>
+                </template>
+              </el-table-column>
               <el-table-column label="操作" width="150" align="center">
                 <template #default="{ row }">
-                  <el-button link type="primary" @click="editVaccination(row)">编辑</el-button>
-                  <el-button link type="danger" @click="deleteVaccination(row.id)">删除</el-button>
+                  <el-button link type="primary" size="small" @click="editVaccination(row)">编辑</el-button>
+                  <el-button link type="danger" size="small" @click="deleteVaccination(row.id)">删除</el-button>
                 </template>
               </el-table-column>
             </el-table>
@@ -437,7 +572,7 @@ import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { healthProfileAPI } from '@/api'
 import { useUserStore } from '@/stores/user'
-import { User, Warning, Connection, KnifeFork, DocumentChecked, Aim } from '@element-plus/icons-vue'
+import { User, Warning, Connection, KnifeFork, DocumentChecked, Aim, Check, Plus } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const userStore = useUserStore()
@@ -912,59 +1047,87 @@ async function deleteVaccination(id: number) {
 </script>
 
 <style scoped>
+/* ===== 容器 ===== */
 .health-profile-container {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
 }
 
-.page-header {
-  margin-bottom: 32px;
+/* ===== 页面 Hero ===== */
+.page-hero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 100%);
+  border-radius: 16px;
+  border: 1px solid rgba(14, 165, 233, 0.15);
 }
 
-.header-left h2 {
-  font-size: 24px;
+.hero-icon {
+  font-size: 40px;
+  line-height: 1;
+}
+
+.hero-text h2 {
+  margin: 0 0 4px;
+  font-size: 22px;
   font-weight: 700;
-  color: var(--color-text-main);
-  margin: 0 0 8px 0;
+  color: #0f172a;
 }
 
-.subtitle {
-  color: var(--color-text-secondary);
-  font-size: 14px;
+.hero-text p {
   margin: 0;
+  font-size: 14px;
+  color: #64748b;
 }
 
-/* Tabs */
+/* ===== 主卡片 ===== */
 .profile-content {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(8px);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-card);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07);
   overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-.custom-tabs {
-  border: none;
-  box-shadow: none;
-}
-
+/* ===== Tabs ===== */
 .custom-tabs :deep(.el-tabs__header) {
-  background-color: #f9fafb;
-  border-bottom: 1px solid var(--color-border);
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  margin: 0;
+  padding: 0 8px;
+}
+
+.custom-tabs :deep(.el-tabs__nav-wrap::after) {
+  display: none;
 }
 
 .custom-tabs :deep(.el-tabs__item) {
-  height: 50px;
-  line-height: 50px;
-  font-size: 15px;
-  color: var(--color-text-secondary);
+  height: 52px;
+  line-height: 52px;
+  font-size: 14px;
+  color: #64748b;
+  padding: 0 20px;
+  transition: all 0.2s;
+}
+
+.custom-tabs :deep(.el-tabs__item:hover) {
+  color: #0ea5e9;
 }
 
 .custom-tabs :deep(.el-tabs__item.is-active) {
-  color: var(--color-primary);
-  background-color: white;
+  color: #0ea5e9;
   font-weight: 600;
+}
+
+.custom-tabs :deep(.el-tabs__active-bar) {
+  background: linear-gradient(90deg, #0ea5e9, #38bdf8);
+  height: 3px;
+  border-radius: 2px 2px 0 0;
 }
 
 .tab-label {
@@ -973,52 +1136,340 @@ async function deleteVaccination(id: number) {
   gap: 6px;
 }
 
+/* ===== Tab 内容区 ===== */
 .tab-pane-content {
-  padding: 24px;
+  padding: 28px;
 }
 
+/* ===== 健康指标卡片 ===== */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.metric-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+
+.metric-bmi { background: linear-gradient(135deg, #fef9c3, #fef3c7); border-color: #fde68a; }
+.metric-bmi.bmi-success { background: linear-gradient(135deg, #dcfce7, #d1fae5); border-color: #86efac; }
+.metric-bmi.bmi-warning { background: linear-gradient(135deg, #fef9c3, #fef3c7); border-color: #fde68a; }
+.metric-bmi.bmi-danger { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: #fca5a5; }
+.metric-heart { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: #fca5a5; }
+.metric-pressure { background: linear-gradient(135deg, #ede9fe, #ddd6fe); border-color: #c4b5fd; }
+.metric-glucose { background: linear-gradient(135deg, #fce7f3, #fbcfe8); border-color: #f9a8d4; }
+.metric-temp { background: linear-gradient(135deg, #e0f2fe, #bae6fd); border-color: #7dd3fc; }
+
+.metric-icon {
+  font-size: 28px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.metric-body {
+  min-width: 0;
+}
+
+.metric-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.metric-sep {
+  font-size: 14px;
+  color: #94a3b8;
+  margin: 0 2px;
+}
+
+.metric-label {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.metric-unit {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.metric-status {
+  font-size: 11px;
+  font-weight: 600;
+  color: #059669;
+  margin-top: 2px;
+}
+
+/* ===== Section Header ===== */
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   padding-bottom: 16px;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid #f1f5f9;
 }
+
+.section-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-dot {
+  width: 4px;
+  height: 20px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #0ea5e9, #38bdf8);
+  flex-shrink: 0;
+}
+
+.section-dot.dot-warning { background: linear-gradient(180deg, #f59e0b, #fbbf24); }
+.section-dot.dot-purple  { background: linear-gradient(180deg, #8b5cf6, #a78bfa); }
+.section-dot.dot-red     { background: linear-gradient(180deg, #ef4444, #f87171); }
+.section-dot.dot-green   { background: linear-gradient(180deg, #10b981, #34d399); }
+.section-dot.dot-blue    { background: linear-gradient(180deg, #3b82f6, #60a5fa); }
 
 .section-header h3 {
   margin: 0;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 600;
-  color: var(--color-text-main);
+  color: #1e293b;
 }
 
-/* Form Styles */
-.custom-form {
-  max-width: 900px;
+/* ===== 表单分组卡片 ===== */
+.form-group-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.form-group-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 16px;
+}
+
+.custom-form :deep(.el-form-item__label) {
+  font-size: 13px;
+  color: #475569;
+  font-weight: 500;
+  padding-bottom: 4px;
+}
+
+.custom-form :deep(.el-input__wrapper),
+.custom-form :deep(.el-textarea__inner) {
+  border-radius: 8px;
+}
+
+/* BMI & Pressure (legacy compat) */
+.bmi-display {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+  padding: 0 12px;
+  background: #fff;
+  border: 1px solid #dcdfe6;
+  border-radius: 8px;
+}
+
+.bmi-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
 }
 
 .pressure-inputs {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .separator {
-  color: var(--color-text-light);
-  font-weight: bold;
+  color: #94a3b8;
+  font-weight: 700;
+  font-size: 18px;
 }
 
-/* Table Styles */
-.custom-table {
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid var(--color-border);
+/* ===== 体征数据网格 ===== */
+.vital-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
 }
 
-.custom-table :deep(th) {
-  background-color: #f9fafb;
-  color: var(--color-text-main);
+.vital-item {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 16px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.vital-item:hover {
+  border-color: #93c5fd;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.08);
+}
+
+.vital-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.vital-emoji {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.vital-name {
+  font-size: 13px;
   font-weight: 600;
+  color: #475569;
+}
+
+.vital-input :deep(.el-input__wrapper) {
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px #e2e8f0 inset;
+}
+
+.vital-input :deep(.el-input__wrapper:hover) {
+  box-shadow: 0 0 0 1px #93c5fd inset;
+}
+
+.vital-unit {
+  font-size: 12px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.vital-bp {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bp-sep {
+  color: #94a3b8;
+  font-weight: 700;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.vital-unit-inline {
+  font-size: 12px;
+  color: #94a3b8;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.vital-item-bmi {
+  background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+  border-color: #bbf7d0;
+}
+
+.vital-bmi-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bmi-number {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+@media (max-width: 900px) {
+  .vital-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .vital-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ===== 表格 ===== */
+.custom-table {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.custom-table :deep(th.el-table__cell) {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  font-size: 13px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.custom-table :deep(.el-table__row:hover > td) {
+  background: #f0f9ff !important;
+}
+
+.custom-table :deep(.el-table__row) {
+  transition: background 0.15s;
+}
+
+/* ===== 辅助样式 ===== */
+.age-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #ede9fe;
+  color: #7c3aed;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.next-dose {
+  color: #0ea5e9;
+  font-weight: 500;
+}
+
+.text-muted {
+  color: #cbd5e1;
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 900px) {
+  .metrics-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .tab-pane-content {
+    padding: 16px;
+  }
 }
 </style>

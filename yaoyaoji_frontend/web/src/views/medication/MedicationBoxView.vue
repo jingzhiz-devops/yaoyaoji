@@ -1,23 +1,42 @@
 <template>
   <div class="medication-box-container">
-    <div class="action-bar">
-      <el-button type="primary" size="large" @click="handleAdd" class="add-btn">
-        <el-icon><Plus /></el-icon>
-        添加药品
+    <!-- 页面标题 -->
+    <div class="page-hero">
+      <div class="hero-icon">💊</div>
+      <div class="hero-text">
+        <h2>我的药箱</h2>
+        <p>共 {{ medicationStore.myMedications.length }} 种药品</p>
+      </div>
+      <el-button type="primary" @click="handleAdd" round class="add-btn">
+        <el-icon><Plus /></el-icon> 添加药品
       </el-button>
     </div>
 
     <div class="medication-grid" v-if="medicationStore.myMedications.length > 0">
-      <div 
-        v-for="med in medicationStore.myMedications" 
-        :key="med.id" 
+      <div
+        v-for="(med, index) in medicationStore.myMedications"
+        :key="med.id"
         class="medication-card"
       >
+        <!-- 序号角标 -->
+        <div class="card-index">{{ index + 1 }}</div>
+
+        <!-- 操作按钮 -->
+        <div class="card-actions">
+          <el-button circle size="small" type="primary" @click.stop="handleEdit(med)">
+            <el-icon><Edit /></el-icon>
+          </el-button>
+          <el-button circle size="small" type="danger" @click.stop="handleRemove(med.id)">
+            <el-icon><Delete /></el-icon>
+          </el-button>
+        </div>
+
+        <!-- 图片区 -->
         <div class="card-image-wrapper" @click="openImageViewer(med.medicine.image_url)">
-          <el-image 
+          <el-image
             v-if="med.medicine.image_url"
-            :src="getImageUrl(med.medicine.image_url)" 
-            fit="cover"
+            :src="getImageUrl(med.medicine.image_url)"
+            fit="contain"
             class="medicine-image"
           >
             <template #error>
@@ -29,43 +48,49 @@
           <div v-else class="image-placeholder">
             <el-icon><FirstAidKit /></el-icon>
           </div>
-          
-          <div class="card-actions">
-            <el-button circle size="small" type="primary" @click.stop="handleEdit(med)">
-              <el-icon><Edit /></el-icon>
-            </el-button>
-            <el-button circle size="small" type="danger" @click.stop="handleRemove(med.id)">
-              <el-icon><Delete /></el-icon>
-            </el-button>
-          </div>
         </div>
 
-        <div class="card-content">
+        <!-- 内容区 -->
+        <div class="card-body">
           <h3 class="medicine-name">{{ med.custom_name || med.medicine.name }}</h3>
           <p class="medicine-manufacturer" v-if="med.medicine.manufacturer">{{ med.medicine.manufacturer }}</p>
-          
-          <div class="contraindications-section" v-if="med.medicine.contraindications">
-            <div class="section-label">
-              <el-icon color="#E6A23C"><Warning /></el-icon>
-              <span>禁忌</span>
-            </div>
-            <p class="contraindications-text">{{ med.medicine.contraindications }}</p>
-          </div>
 
-          <div class="notes-section" v-if="med.notes && med.notes.trim()">
-            <div class="section-label">备注</div>
-            <p class="notes-text">{{ med.notes }}</p>
+          <!-- 信息行 -->
+          <div class="card-info-list">
+            <div class="info-row" v-if="med.medicine.contraindications">
+              <span class="info-tag info-tag-warn">禁忌</span>
+              <el-tooltip 
+                :content="med.medicine.contraindications" 
+                placement="top" 
+                :show-after="300"
+                effect="dark"
+              >
+                <span class="info-text">{{ med.medicine.contraindications }}</span>
+              </el-tooltip>
+            </div>
+
+            <div class="info-row" v-if="med.notes && med.notes.trim()">
+              <span class="info-tag">备注</span>
+              <el-tooltip 
+                :content="med.notes" 
+                placement="top" 
+                :show-after="300"
+                effect="dark"
+              >
+                <span class="info-text">{{ med.notes }}</span>
+              </el-tooltip>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <el-empty 
-      v-else 
-      description="药箱是空的，快去添加药品吧！" 
-      :image-size="200"
+    <el-empty
+      v-else
+      description="药箱是空的，快去添加药品吧！"
+      :image-size="160"
     >
-      <el-button type="primary" @click="handleAdd">立即添加</el-button>
+      <el-button type="primary" @click="handleAdd" round>立即添加</el-button>
     </el-empty>
 
     <!-- 添加/编辑药品对话框 -->
@@ -521,285 +546,330 @@ async function handleRemove(id: number) {
 </script>
 
 <style scoped>
+/* ===== 容器 ===== */
 .medication-box-container {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
 }
 
-.page-header {
+/* ===== 页面 Hero ===== */
+.page-hero {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 32px;
-}
-
-.header-left h2 {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--color-text-main);
-  margin: 0 0 8px 0;
-}
-
-.subtitle {
-  color: var(--color-text-secondary);
-  font-size: 14px;
-  margin: 0;
-}
-
-/* Action Bar */
-.action-bar {
-  display: flex;
-  justify-content: flex-end;
+  gap: 16px;
   margin-bottom: 24px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+  border-radius: 16px;
+  border: 1px solid rgba(16, 185, 129, 0.15);
+}
+
+.hero-icon {
+  font-size: 40px;
+  line-height: 1;
+}
+
+.hero-text {
+  flex: 1;
+}
+
+.hero-text h2 {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.hero-text p {
+  margin: 0;
+  font-size: 14px;
+  color: #64748b;
 }
 
 .add-btn {
-  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
 }
 
-/* Grid Layout */
+/* ===== 药品网格 ===== */
 .medication-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
 }
 
+/* ===== 药品卡片 ===== */
 .medication-card {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(8px);
-  border-radius: var(--radius-md);
+  position: relative;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
   overflow: hidden;
-  box-shadow: var(--shadow-card);
-  transition: transform 0.3s, box-shadow 0.3s;
-  display: flex;
-  flex-direction: column;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .medication-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
-/* Card Image */
+/* 序号角标 */
+.card-index {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  background: rgba(16, 185, 129, 0.9);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+/* 操作按钮 */
+.card-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 10;
+}
+
+.medication-card:hover .card-actions {
+  opacity: 1;
+}
+
+.card-actions .el-button {
+  width: 28px;
+  height: 28px;
+}
+
+/* 图片区 */
 .card-image-wrapper {
-  height: 180px;
-  background-color: #f8f9fa;
-  position: relative;
-  overflow: hidden;
+  width: 100%;
+  height: 140px;
+  background: #f9fafb;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid #f3f4f6;
 }
 
 .medicine-image {
   width: 100%;
   height: 100%;
-  transition: transform 0.5s;
-}
-
-.card-image-wrapper:hover .medicine-image {
-  transform: scale(1.05);
 }
 
 .image-placeholder {
-  width: 100%;
-  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #dcdfe6;
-  font-size: 48px;
-  background-color: #f5f7fa;
+  color: #d1d5db;
 }
 
-/* Card Actions Overlay */
-.card-actions {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  display: flex;
-  gap: 8px;
-  opacity: 0;
-  transform: translateY(-10px);
-  transition: all 0.3s;
+.image-placeholder .el-icon {
+  font-size: 40px;
 }
 
-.medication-card:hover .card-actions {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* Card Content */
-.card-content {
-  padding: 16px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+/* 内容区 */
+.card-body {
+  padding: 14px;
 }
 
 .medicine-name {
-  font-size: 16px;
+  margin: 0 0 4px;
+  font-size: 15px;
   font-weight: 600;
-  color: var(--color-text-main);
-  margin: 0 0 4px 0;
-  white-space: nowrap;
+  color: #1f2937;
+  line-height: 1.4;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.medicine-manufacturer {
-  font-size: 12px;
-  color: var(--color-text-light);
-  margin: 0 0 12px 0;
-}
-
-.tags-container {
-  margin-bottom: 12px;
-}
-
-.section-label {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  margin-bottom: 6px;
-}
-
-.contraindications-section {
-  background-color: #fff7ed;
-  border-left: 3px solid #E6A23C;
-  padding: 8px 12px;
-  margin-bottom: 12px;
-  border-radius: 4px;
-}
-
-.contraindications-text {
-  font-size: 13px;
-  color: #78350f;
-  line-height: 1.5;
-  margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.notes-section {
-  padding-top: 12px;
-  border-top: 1px solid var(--color-border);
-}
-
-.notes-text {
-  font-size: 13px;
-  color: var(--color-text-secondary);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  overflow: hidden;
-  margin: 0;
 }
 
-/* Upload Styles */
-.upload-wrapper {
+.medicine-manufacturer {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: #9ca3af;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 信息列表 */
+.card-info-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
+}
+
+.info-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.info-tag {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  background: #f3f4f6;
+  color: #6b7280;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.info-tag-warn {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.info-text {
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  cursor: pointer;
+}
+
+.info-text:hover {
+  color: #374151;
+}
+
+/* ===== 对话框 ===== */
+.custom-dialog :deep(.el-dialog__header) {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.custom-dialog :deep(.el-dialog__title) {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.custom-dialog :deep(.el-dialog__body) {
+  padding: 24px;
+}
+
+.custom-dialog :deep(.el-form-item__label) {
+  font-size: 14px;
+  font-weight: 500;
+  color: #475569;
+}
+
+/* 上传区域 */
+.upload-wrapper {
+  outline: none;
 }
 
 .medicine-image-uploader-custom {
-  border: 2px dashed var(--el-border-color);
-  border-radius: 8px;
-  transition: all 0.3s ease;
-  padding: 0;
-  outline: none;
-  background-color: #fafbfc;
-  overflow: hidden;
-}
-
-.medicine-image-uploader-custom:focus {
-  outline: 2px solid var(--el-color-primary);
-  outline-offset: 2px;
-}
-
-.medicine-image-uploader-custom.dragging {
-  border-color: var(--el-color-primary);
-  background-color: #f0f9ff;
-}
-
-.medicine-image-uploader :deep(.el-upload) {
-  border: none;
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
   cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  transition: var(--el-transition-duration-fast);
-  width: 100%;
-  min-height: 180px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: transparent;
+  transition: all 0.2s;
+  background: #fafafa;
 }
 
-.medicine-image-uploader :deep(.el-upload:hover) {
-  background-color: rgba(64, 158, 255, 0.05);
+.medicine-image-uploader-custom:hover,
+.medicine-image-uploader-custom.dragging {
+  border-color: #10b981;
+  background: #f0fdf4;
+}
+
+.medicine-image-uploader {
+  width: 100%;
+}
+
+.uploaded-image {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 8px;
+  object-fit: contain;
 }
 
 .upload-placeholder {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  color: #909399;
-  font-size: 12px;
   gap: 12px;
-  padding: 40px 20px;
-  width: 100%;
+  padding: 20px;
+}
+
+.upload-icon {
+  font-size: 36px;
+  color: #10b981;
 }
 
 .upload-text {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 4px;
 }
 
 .upload-text .main-text {
-  color: #606266;
-  font-weight: 500;
+  font-size: 14px;
+  color: #475569;
 }
 
 .upload-text .sub-text {
-  color: #909399;
-  font-size: 11px;
-}
-
-.upload-icon {
-  font-size: 32px;
-  color: #c0c4cc;
-}
-
-.uploaded-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  font-size: 12px;
+  color: #94a3b8;
 }
 
 .upload-actions {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
-}
-
-.upload-actions .el-button {
-  flex: 0 1 auto;
+  justify-content: center;
+  margin-top: 12px;
 }
 
 .upload-tip {
+  text-align: center;
   font-size: 12px;
-  color: var(--color-text-light);
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  color: #94a3b8;
+  margin-top: 8px;
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 768px) {
+  .medication-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+  }
+  
+  .page-hero {
+    flex-wrap: wrap;
+  }
+  
+  .add-btn {
+    width: 100%;
+    margin-top: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .medication-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
+

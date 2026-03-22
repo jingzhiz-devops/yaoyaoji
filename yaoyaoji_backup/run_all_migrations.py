@@ -205,6 +205,25 @@ def run_all_migrations():
             else:
                 print("  ✅ is_pinned 列已存在")
         
+        # 9. 给 followup_plans 表添加 notes 字段
+        print("\n📋 [9/9] 检查 followup_plans 表 notes 字段...")
+        if 'followup_plans' in inspector.get_table_names():
+            columns = [col['name'] for col in inspector.get_columns('followup_plans')]
+            if 'notes' not in columns:
+                print("  ➕ 正在添加 notes 列...")
+                with engine.connect() as conn:
+                    try:
+                        conn.execute(text("ALTER TABLE followup_plans ADD COLUMN notes TEXT NULL"))
+                        conn.commit()
+                        print("  ✅ notes 列添加成功")
+                    except Exception as e:
+                        if 'Duplicate column' in str(e):
+                            print("  ✅ notes 列已存在")
+                        else:
+                            print(f"  ⚠️ notes 列添加失败: {e}")
+            else:
+                print("  ✅ notes 列已存在")
+        
         print("\n" + "=" * 60)
         print("✨ 数据库迁移完成！")
         print("=" * 60)

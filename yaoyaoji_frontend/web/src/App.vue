@@ -1,5 +1,14 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import { RouterView } from 'vue-router'
+import { heartbeatService } from '@/services/heartbeat'
+
+onMounted(() => {
+  const token = localStorage.getItem('token') || localStorage.getItem('admin_token')
+  if (token) {
+    heartbeatService.connect(token)
+  }
+})
 </script>
 
 <template>

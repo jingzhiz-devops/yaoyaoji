@@ -338,7 +338,8 @@ async def create_followup_plan(
         responsible_doctor=data.responsible_doctor,
         followup_checklist=data.followup_checklist,
         target_values=data.target_values,
-        reminder_days=data.reminder_days
+        reminder_days=data.reminder_days,
+        notes=data.notes
     )
     db.add(plan)
     db.commit()
@@ -399,6 +400,7 @@ async def update_followup_plan(
     plan.followup_checklist = data.followup_checklist
     plan.target_values = data.target_values
     plan.reminder_days = data.reminder_days
+    plan.notes = data.notes
     plan.updated_at = datetime.now()
     
     db.commit()

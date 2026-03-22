@@ -90,6 +90,8 @@ ingress:
   tls:
     enabled: false
     secretName: yaoyaoji-tls
+    certManager: false
+    clusterIssuer: letsencrypt-prod
 
 # Application Configuration (stored in ConfigMap)
 config:

@@ -1,10 +1,11 @@
 """
 用户认证和管理路由
 """
+from datetime import datetime, timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from datetime import timedelta
 
 from app.database import get_db
 from app.models.models import User
@@ -72,6 +73,10 @@ async def login(
     access_token = create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
+    
+    # 更新最后登录时间
+    user.last_login = datetime.now()
+    db.commit()
     
     return {"access_token": access_token, "token_type": "bearer"}
 
