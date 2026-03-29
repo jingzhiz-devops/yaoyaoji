@@ -516,8 +516,7 @@ function getRoleText(role: string | undefined): string {
     parent: '家长',
     child: '儿童',
     elderly: '老人',
-    spouse: '配偶',
-    other: '其他'
+    spouse: '配偶'
   }
   return roleMap[role] || role
 }

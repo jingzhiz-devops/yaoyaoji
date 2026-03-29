@@ -25,6 +25,12 @@ export const authAPI = {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     }),
   
+  // Google 第三方登录
+  googleLogin: (credential: string) =>
+    service.post('/auth/google-login', new URLSearchParams({ credential }), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    }),
+  
   // 获取当前用户信息
   getCurrentUser: (customToken?: string) => {
     const config = customToken

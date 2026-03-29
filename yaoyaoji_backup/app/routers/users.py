@@ -120,6 +120,68 @@ async def login(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
+@auth_router.post("/google-login", response_model=Token)
+async def google_login(
+    credential: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Google 第三方登录"""
+    from google.oauth2 import id_token
+    from google.auth.transport import requests as google_requests
+
+    try:
+        idinfo = id_token.verify_oauth2_token(
+            credential,
+            google_requests.Request(),
+            settings.GOOGLE_CLIENT_ID,
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Google 登录验证失败",
+        )
+
+    email = idinfo.get("email")
+    name = idinfo.get("name", email.split("@")[0] if email else "google_user")
+
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="无法获取 Google 账号邮箱",
+        )
+
+    # 查找已有用户（先按邮箱匹配）
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        # 自动注册
+        import uuid
+        random_pw = get_password_hash(uuid.uuid4().hex)
+        user = User(
+            username=name,
+            password_hash=random_pw,
+            email=email,
+            avatar=idinfo.get("picture", ""),
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="该账号已被禁用，请联系管理员",
+        )
+
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    user.last_login = datetime.now()
+    db.commit()
+
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     """获取当前用户信息"""

@@ -164,12 +164,126 @@ onMounted(loadData)
 </script>
 
 <style scoped lang="scss">
-.header-row { display: flex; justify-content: space-between; align-items: center; }
-.complication-item {
-  .item-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
-    .type { font-weight: 600; font-size: 15px; }
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  :deep(.el-select) {
+    .el-input__wrapper {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: none;
+      border-radius: 10px;
+
+      .el-input__inner {
+        color: #e0e6ed;
+      }
+
+      &:hover {
+        border-color: rgba(64, 158, 255, 0.35);
+      }
+    }
   }
-  .symptoms, .treatment { margin: 4px 0; color: #606266; font-size: 14px; }
-  .item-actions { margin-top: 8px; }
+
+  :deep(.el-button--primary) {
+    background: rgba(64, 158, 255, 0.2);
+    border: 1px solid rgba(64, 158, 255, 0.35);
+    color: #79bbff;
+    border-radius: 10px;
+
+    &:hover {
+      background: rgba(64, 158, 255, 0.3);
+      box-shadow: 0 0 16px rgba(64, 158, 255, 0.2);
+    }
+  }
+}
+
+:deep(.el-timeline) {
+  .el-timeline-item__wrapper {
+    .el-timeline-item__timestamp {
+      color: rgba(160, 180, 200, 0.7);
+    }
+  }
+}
+
+.complication-item {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 16px 20px;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: rgba(64, 158, 255, 0.35);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
+  }
+
+  .item-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+
+    .type {
+      font-weight: 600;
+      font-size: 15px;
+      color: #e8ecf1;
+      letter-spacing: 0.5px;
+    }
+
+    :deep(.el-tag) {
+      border-radius: 20px;
+      border: none;
+
+      &.el-tag--info {
+        background: rgba(144, 147, 153, 0.15);
+        color: #a8abb2;
+        border: 1px solid rgba(144, 147, 153, 0.25);
+      }
+      &.el-tag--warning {
+        background: rgba(230, 162, 60, 0.15);
+        color: #eebe77;
+        border: 1px solid rgba(230, 162, 60, 0.25);
+      }
+      &.el-tag--danger {
+        background: rgba(245, 108, 108, 0.15);
+        color: #f89898;
+        border: 1px solid rgba(245, 108, 108, 0.25);
+      }
+      &.el-tag--success {
+        background: rgba(103, 194, 58, 0.15);
+        color: #95d475;
+        border: 1px solid rgba(103, 194, 58, 0.25);
+      }
+    }
+  }
+
+  .symptoms, .treatment {
+    margin: 6px 0;
+    color: rgba(200, 210, 220, 0.8);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .item-actions {
+    margin-top: 10px;
+
+    :deep(.el-button) {
+      color: rgba(160, 180, 200, 0.8);
+
+      &:hover {
+        color: #79bbff;
+      }
+
+      &.el-button--success {
+        color: rgba(103, 194, 58, 0.8);
+        &:hover { color: #95d475; }
+      }
+    }
+  }
 }
 </style>
