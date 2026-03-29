@@ -61,35 +61,57 @@
                 </div>
                 
                 <div class="members-grid">
-                  <el-card v-for="member in members" :key="member.id" class="member-card" shadow="hover">
-                    <div class="member-card-header">
-                      <el-avatar :size="50" :style="{ backgroundColor: getRoleColor(member.role) }">
-                        {{ member.name.charAt(0) }}
-                      </el-avatar>
-                      <div class="member-role-tag">
-                        <el-tag :type="getRoleTagType(member.role)" size="small" effect="dark">
+                  <div v-for="member in members" :key="member.id" class="member-card">
+                    <div class="member-card-bg" :style="{ background: getMemberGradient(member.role) }"></div>
+                    <div class="member-card-body">
+                      <div class="member-avatar-wrapper">
+                        <div class="member-avatar" :style="{ background: getMemberGradient(member.role) }">
+                          {{ member.name.charAt(0) }}
+                        </div>
+                        <span class="member-status-dot"></span>
+                      </div>
+                      <div class="member-name">{{ member.name }}</div>
+                      <div class="member-meta">
+                        <el-tag 
+                          :color="getRoleColor(member.role)" 
+                          effect="dark" 
+                          size="small" 
+                          round
+                          style="border: none;"
+                        >
                           {{ getRoleText(member.role) }}
                         </el-tag>
+                        <span class="member-age" v-if="member.age">{{ member.age }}岁</span>
+                        <span class="member-age no-age" v-else>年龄未知</span>
+                      </div>
+                      <div class="member-notes" v-if="member.notes">
+                        <span class="notes-text">{{ member.notes }}</span>
+                      </div>
+                      <div class="member-actions">
+                        <el-tooltip content="编辑" placement="top">
+                          <button class="action-btn edit-btn" @click="editMember(member)">
+                            <el-icon><Edit /></el-icon>
+                          </button>
+                        </el-tooltip>
+                        <el-tooltip content="删除" placement="top">
+                          <button class="action-btn delete-btn" @click="deleteMember(member.id)">
+                            <el-icon><Delete /></el-icon>
+                          </button>
+                        </el-tooltip>
                       </div>
                     </div>
-                    <div class="member-info">
-                      <h4>{{ member.name }}</h4>
-                      <p v-if="member.age">{{ member.age }}岁</p>
-                      <p v-else class="no-age">年龄未知</p>
-                    </div>
-                    <div class="member-actions">
-                      <el-button circle size="small" @click="editMember(member)"><el-icon><Edit /></el-icon></el-button>
-                      <el-button circle size="small" type="danger" plain @click="deleteMember(member.id)"><el-icon><Delete /></el-icon></el-button>
-                    </div>
-                  </el-card>
+                  </div>
                   
                   <!-- 邀请卡片 -->
-                  <el-card class="member-card invite-card" shadow="hover" @click="copyInviteCode">
+                  <div class="member-card invite-card" @click="copyInviteCode">
                     <div class="invite-content">
-                      <el-icon class="invite-icon"><Plus /></el-icon>
-                      <span>邀请成员</span>
+                      <div class="invite-icon-wrapper">
+                        <el-icon class="invite-icon"><Plus /></el-icon>
+                      </div>
+                      <span class="invite-text">邀请成员</span>
+                      <span class="invite-hint">复制邀请码分享给家人</span>
                     </div>
-                  </el-card>
+                  </div>
                 </div>
               </div>
             </div>
@@ -179,8 +201,11 @@
             <el-option label="儿童" value="child" />
             <el-option label="老人" value="elderly" />
             <el-option label="配偶" value="spouse" />
-            <el-option label="其他" value="other" />
+            <el-option label="自定义" value="custom" />
           </el-select>
+        </el-form-item>
+        <el-form-item v-if="editMemberForm.role === 'custom'" label="自定义角色名称" required>
+          <el-input v-model="editMemberForm.customRole" placeholder="请输入自定义角色名称" maxlength="20" />
         </el-form-item>
         <el-form-item label="出生日期">
           <el-date-picker v-model="editMemberForm.birth_date" type="date" placeholder="选择日期" style="width: 100%" />
@@ -254,6 +279,7 @@ const editMemberForm = ref({
   id: 0,
   name: '',
   role: '',
+  customRole: '',
   birth_date: null as Date | null,
   notes: null as string | null
 })
@@ -377,10 +403,13 @@ function copyInviteCode() {
 
 // 成员操作
 function editMember(row: any) {
+  const predefinedRoles = ['parent', 'child', 'elderly', 'spouse', 'admin', 'member']
+  const isCustomRole = row.role && !predefinedRoles.includes(row.role) && row.role !== 'other'
   editMemberForm.value = {
     id: row.id,
     name: row.name,
-    role: row.role || 'other',
+    role: isCustomRole ? 'custom' : (row.role || 'custom'),
+    customRole: isCustomRole ? row.role : '',
     birth_date: row.birth_date ? new Date(row.birth_date) : null,
     notes: row.notes
   }
@@ -392,10 +421,17 @@ async function saveMemberEdit() {
     ElMessage.warning('请选择角色')
     return
   }
+  if (editMemberForm.value.role === 'custom' && !editMemberForm.value.customRole?.trim()) {
+    ElMessage.warning('请输入自定义角色名称')
+    return
+  }
   saving.value = true
   try {
+    const actualRole = editMemberForm.value.role === 'custom'
+      ? editMemberForm.value.customRole.trim()
+      : editMemberForm.value.role
     const submitData: any = {
-      role: editMemberForm.value.role,
+      role: actualRole,
       notes: editMemberForm.value.notes
     }
     if (editMemberForm.value.birth_date) {
@@ -484,8 +520,7 @@ function getRoleText(role: string): string {
     parent: '家长',
     child: '儿童',
     elderly: '老人',
-    spouse: '配偶',
-    other: '其他'
+    spouse: '配偶'
   }
   return roleMap[role] || role
 }
@@ -495,8 +530,7 @@ function getRoleTagType(role: string): string {
     parent: 'success',
     child: 'warning',
     elderly: 'danger',
-    spouse: 'info',
-    other: ''
+    spouse: 'info'
   }
   return typeMap[role] || ''
 }
@@ -510,6 +544,17 @@ function getRoleColor(role: string): string {
     other: '#409eff'
   }
   return colorMap[role] || '#409eff'
+}
+
+function getMemberGradient(role: string): string {
+  const gradientMap: Record<string, string> = {
+    parent: 'linear-gradient(135deg, #67c23a, #95d475)',
+    child: 'linear-gradient(135deg, #e6a23c, #f0c78a)',
+    elderly: 'linear-gradient(135deg, #f56c6c, #fab6b6)',
+    spouse: 'linear-gradient(135deg, #909399, #c0c4cc)',
+    other: 'linear-gradient(135deg, #409eff, #79bbff)'
+  }
+  return gradientMap[role] || gradientMap.other
 }
 </script>
 
@@ -722,76 +767,174 @@ function getRoleColor(role: string): string {
 
 .members-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
 }
 
 .member-card {
-  border: none;
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid var(--color-border);
-  transition: all 0.3s;
   position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #eef2f7;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: default;
 }
 
 .member-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-md);
+  transform: translateY(-6px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+  border-color: transparent;
 }
 
-.member-card-header {
+.member-card-bg {
+  height: 56px;
+  opacity: 0.85;
+}
+
+.member-card-body {
   display: flex;
-  justify-content: center;
-  margin-bottom: 12px;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 16px 20px;
+  margin-top: -30px;
   position: relative;
 }
 
-.member-role-tag {
+.member-avatar-wrapper {
+  position: relative;
+  margin-bottom: 10px;
+}
+
+.member-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  border: 3px solid #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.member-status-dot {
   position: absolute;
-  bottom: -6px;
+  bottom: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  background: #67c23a;
+  border: 2px solid #fff;
+  border-radius: 50%;
 }
 
-.member-info {
-  text-align: center;
-  margin-bottom: 16px;
-}
-
-.member-info h4 {
-  margin: 0 0 4px 0;
+.member-name {
   font-size: 16px;
-  color: var(--color-text-main);
+  font-weight: 600;
+  color: var(--color-text-main, #1f2937);
+  margin-bottom: 8px;
+  text-align: center;
+  line-height: 1.3;
 }
 
-.member-info p {
-  margin: 0;
+.member-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.member-age {
   font-size: 13px;
-  color: var(--color-text-light);
+  color: var(--color-text-secondary, #6b7280);
+}
+
+.member-age.no-age {
+  color: var(--color-text-light, #9ca3af);
+  font-style: italic;
+}
+
+.member-notes {
+  margin-top: 4px;
+  padding: 0 4px;
+}
+
+.member-notes .notes-text {
+  font-size: 12px;
+  color: var(--color-text-secondary, #6b7280);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-all;
 }
 
 .member-actions {
   display: flex;
-  justify-content: center;
   gap: 8px;
   opacity: 0;
-  transition: opacity 0.3s;
+  transform: translateY(4px);
+  transition: all 0.25s ease;
 }
 
 .member-card:hover .member-actions {
   opacity: 1;
+  transform: translateY(0);
 }
 
-.invite-card {
-  border: 2px dashed var(--color-border);
+.action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  background: #f9fafb;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.edit-btn {
+  background: #f0f9ff;
+  color: #3b82f6;
+}
+
+.edit-btn:hover {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.delete-btn {
+  background: #fef2f2;
+  color: #ef4444;
+}
+
+.delete-btn:hover {
+  background: #ef4444;
+  color: #fff;
+}
+
+/* Invite Card */
+.invite-card {
+  border: 2px dashed #d1d5db;
+  background: #fafbfc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  min-height: 200px;
+  transition: all 0.3s ease;
 }
 
 .invite-card:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  border-color: var(--color-primary, #2a9d8f);
+  background: #f0fdf9;
+  transform: translateY(-6px);
+  box-shadow: 0 12px 32px rgba(42, 157, 143, 0.08);
 }
 
 .invite-content {
@@ -799,11 +942,43 @@ function getRoleColor(role: string): string {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  color: var(--color-text-light);
+  padding: 24px 16px;
+}
+
+.invite-icon-wrapper {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #e8f5f3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.invite-card:hover .invite-icon-wrapper {
+  background: var(--color-primary, #2a9d8f);
 }
 
 .invite-icon {
-  font-size: 32px;
+  font-size: 24px;
+  color: var(--color-primary, #2a9d8f);
+  transition: color 0.3s;
+}
+
+.invite-card:hover .invite-icon {
+  color: #fff;
+}
+
+.invite-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-main, #1f2937);
+}
+
+.invite-hint {
+  font-size: 12px;
+  color: var(--color-text-light, #9ca3af);
 }
 
 /* Contacts Grid */

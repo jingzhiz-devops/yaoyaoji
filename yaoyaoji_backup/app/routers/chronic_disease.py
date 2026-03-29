@@ -312,7 +312,7 @@ async def get_indicator_records(
     return query.order_by(IndicatorRecord.measurement_date.desc()).all()
 
 
-# ============= 随访计划管理 API =============
+# ============= 复查计划管理 API =============
 
 @router.post("/{disease_id}/followup-plans", response_model=FollowupPlanResponse)
 async def create_followup_plan(
@@ -321,7 +321,7 @@ async def create_followup_plan(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """创建随访计划"""
+    """创建复查计划"""
     # 验证用户权限
     disease = db.query(ChronicDisease).filter(
         ChronicDisease.id == disease_id,
@@ -353,7 +353,7 @@ async def get_followup_plans(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """获取随访计划"""
+    """获取复查计划"""
     # 验证用户权限
     disease = db.query(ChronicDisease).filter(
         ChronicDisease.id == disease_id,
@@ -376,7 +376,7 @@ async def update_followup_plan(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """更新随访计划"""
+    """更新复查计划"""
     # 验证用户权限
     disease = db.query(ChronicDisease).filter(
         ChronicDisease.id == disease_id,
@@ -392,7 +392,7 @@ async def update_followup_plan(
     ).first()
     
     if not plan:
-        raise HTTPException(status_code=404, detail="随访计划不存在")
+        raise HTTPException(status_code=404, detail="复查计划不存在")
     
     plan.frequency = data.frequency
     plan.next_followup_date = data.next_followup_date
@@ -415,7 +415,7 @@ async def delete_followup_plan(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """删除随访计划"""
+    """删除复查计划"""
     # 验证用户权限
     disease = db.query(ChronicDisease).filter(
         ChronicDisease.id == disease_id,
@@ -431,14 +431,14 @@ async def delete_followup_plan(
     ).first()
     
     if not plan:
-        raise HTTPException(status_code=404, detail="随访计划不存在")
+        raise HTTPException(status_code=404, detail="复查计划不存在")
     
     db.delete(plan)
     db.commit()
     return {"message": "删除成功"}
 
 
-# ============= 随访记录管理 API =============
+# ============= 复查记录管理 API =============
 
 @router.post("/{disease_id}/followup-plans/{plan_id}/records", response_model=FollowupRecordResponse)
 async def create_followup_record(
@@ -448,7 +448,7 @@ async def create_followup_record(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """记录随访结果"""
+    """记录复查结果"""
     # 验证用户权限
     disease = db.query(ChronicDisease).filter(
         ChronicDisease.id == disease_id,
@@ -464,7 +464,7 @@ async def create_followup_record(
     ).first()
     
     if not plan:
-        raise HTTPException(status_code=404, detail="随访计划不存在")
+        raise HTTPException(status_code=404, detail="复查计划不存在")
     
     record = FollowupRecord(
         followup_plan_id=plan_id,
@@ -477,7 +477,7 @@ async def create_followup_record(
         next_plan=data.next_plan
     )
     
-    # 更新随访计划的最后随访日期
+    # 更新复查计划的最后复查日期
     plan.last_followup_date = data.followup_date.date()
     
     db.add(record)
@@ -493,7 +493,7 @@ async def get_followup_records(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """获取随访记录历史"""
+    """获取复查记录历史"""
     # 验证用户权限
     disease = db.query(ChronicDisease).filter(
         ChronicDisease.id == disease_id,
@@ -509,7 +509,7 @@ async def get_followup_records(
     ).first()
     
     if not plan:
-        raise HTTPException(status_code=404, detail="随访计划不存在")
+        raise HTTPException(status_code=404, detail="复查计划不存在")
     
     return db.query(FollowupRecord).filter(
         FollowupRecord.followup_plan_id == plan_id

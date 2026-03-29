@@ -38,3 +38,9 @@ yarn-error.log*
 tmp/
 temp/
 coverage/
+
+# 构建无关文件
+.editorconfig
+.env.example
+.gitattributes
+Dockerfile

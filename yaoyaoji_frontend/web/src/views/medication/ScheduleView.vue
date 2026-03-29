@@ -5,6 +5,10 @@
         <el-icon><Plus /></el-icon>
         创建提醒
       </el-button>
+      <el-button size="large" @click="showFeishuConfig" class="feishu-config-btn">
+        <span class="feishu-logo-btn">飞书</span>
+        通知设置
+      </el-button>
     </div>
 
     <div v-if="upcomingReminders.length > 0" class="reminder-banner">
@@ -170,20 +174,80 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 飞书通知配置对话框 -->
+    <el-dialog v-model="feishuDialogVisible" title="飞书通知设置" width="500px" class="custom-dialog">
+      <div class="feishu-config-content">
+        <div class="feishu-status">
+          <span class="status-label">当前状态：</span>
+          <span v-if="userStore.user?.feishu_webhook" class="status-value configured">
+            ✓ 已配置
+          </span>
+          <span v-else class="status-value not-configured">
+            ✗ 未配置
+          </span>
+        </div>
+        
+        <div class="feishu-help">
+          <p><strong>如何获取飞书机器人 Webhook？</strong></p>
+          <ol>
+            <li>在飞书群中点击「设置」→「群机器人」→「添加机器人」</li>
+            <li>选择「自定义机器人」，输入机器人名称</li>
+            <li>复制生成的 Webhook 地址粘贴到下方</li>
+          </ol>
+        </div>
+        
+        <el-form :model="feishuForm" :rules="feishuRules" ref="feishuFormRef" label-position="top">
+          <el-form-item label="Webhook 地址" prop="feishu_webhook">
+            <el-input 
+              v-model="feishuForm.feishu_webhook" 
+              placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/..." 
+              size="large"
+              clearable
+            />
+          </el-form-item>
+          <div class="form-tip">配置后，用药提醒将通过机器人发送到对应的飞书群</div>
+        </el-form>
+      </div>
+      <template #footer>
+        <el-button @click="feishuDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleSaveFeishuWebhook" :loading="feishuSubmitting">保存配置</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { scheduleAPI, userMedicationAPI } from '@/api'
+import { scheduleAPI, userMedicationAPI, feishuAPI, authAPI } from '@/api'
 import { Plus, AlarmClock, Calendar, Dish, Edit, Delete, Timer } from '@element-plus/icons-vue'
+import { useUserStore } from '@/stores/user'
 import dayjs from 'dayjs'
+
+const userStore = useUserStore()
 
 const dialogVisible = ref(false)
 const schedules = ref<any[]>([])
 const medications = ref<any[]>([])
 const editingId = ref<number | null>(null)
+
+// 飞书配置相关
+const feishuDialogVisible = ref(false)
+const feishuFormRef = ref()
+const feishuSubmitting = ref(false)
+const feishuForm = ref({
+  feishu_webhook: ''
+})
+const feishuRules = {
+  feishu_webhook: [
+    { 
+      pattern: /^https:\/\/open\.feishu\.cn\/open-apis\/bot\//, 
+      message: '请输入正确的飞书Webhook地址', 
+      trigger: 'blur' 
+    }
+  ]
+}
 
 // 提前5分钟提醒
 const nowTs = ref(Date.now())
@@ -270,6 +334,15 @@ watch(upcomingReminders, (list) => {
       speakGentle(speechText, 3)
       announcedKeys.add(item.key)
       setTimeout(() => announcedKeys.delete(item.key), 5 * 60 * 1000)
+      
+      // 同时发送飞书通知
+      feishuAPI.sendReminder({
+        medicine_name: item.name,
+        reminder_time: item.time.substring(0, 5),
+        notes: item.notes || ''
+      }).catch((err: any) => {
+        console.warn('飞书通知发送失败:', err)
+      })
     }
   })
 })
@@ -301,6 +374,34 @@ onUnmounted(() => {
     window.speechSynthesis.cancel()
   }
 })
+
+// 显示飞书配置对话框
+function showFeishuConfig() {
+  feishuForm.value = {
+    feishu_webhook: userStore.user?.feishu_webhook || ''
+  }
+  feishuDialogVisible.value = true
+}
+
+// 保存飞书 Webhook
+async function handleSaveFeishuWebhook() {
+  await feishuFormRef.value.validate(async (valid: boolean) => {
+    if (valid) {
+      feishuSubmitting.value = true
+      try {
+        const webhook = feishuForm.value.feishu_webhook?.trim() || ''
+        await authAPI.updateProfile({ feishu_webhook: webhook || undefined })
+        await userStore.fetchUserInfo()
+        ElMessage.success('飞书通知配置成功')
+        feishuDialogVisible.value = false
+      } catch (error: any) {
+        ElMessage.error(error.response?.data?.detail || '配置失败')
+      } finally {
+        feishuSubmitting.value = false
+      }
+    }
+  })
+}
 
 async function fetchSchedules() {
   try {
@@ -736,5 +837,79 @@ function needsReplenishReminder(schedule: any): boolean {
   50% { transform: rotate(0deg); }
   75% { transform: rotate(-12deg); }
   100% { transform: rotate(0deg); }
+}
+
+/* 飞书配置按钮 */
+.feishu-config-btn {
+  background: linear-gradient(135deg, #3370ff 0%, #5e8dff 100%);
+  border: none;
+  color: white;
+}
+
+.feishu-config-btn:hover {
+  background: linear-gradient(135deg, #2860e1 0%, #4d7de8 100%);
+  color: white;
+}
+
+.feishu-logo-btn {
+  font-weight: bold;
+  margin-right: 4px;
+}
+
+/* 飞书配置对话框 */
+.feishu-config-content {
+  padding: 0 8px;
+}
+
+.feishu-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: #f5f7fa;
+  border-radius: 8px;
+}
+
+.status-label {
+  color: var(--color-text-secondary);
+}
+
+.status-value {
+  font-weight: 600;
+}
+
+.status-value.configured {
+  color: #67c23a;
+}
+
+.status-value.not-configured {
+  color: #f56c6c;
+}
+
+.feishu-help {
+  background: #f5f7fa;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.feishu-help p {
+  margin: 0 0 8px 0;
+  color: var(--color-text-main);
+}
+
+.feishu-help ol {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.form-tip {
+  font-size: 12px;
+  color: var(--color-text-light);
+  margin-top: 4px;
 }
 </style>

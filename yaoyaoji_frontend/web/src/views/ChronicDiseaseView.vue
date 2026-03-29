@@ -74,65 +74,109 @@
         :class="`status-${disease.control_status}`"
         @click="selectDisease(disease)"
       >
-        <!-- 顶部色条 -->
-        <div class="card-accent-bar"></div>
+        <!-- 左侧状态指示条 -->
+        <div class="status-indicator">
+          <div class="status-icon-wrapper">
+            <span class="status-emoji">{{ getStatusEmoji(disease.control_status) }}</span>
+          </div>
+          <div class="status-line"></div>
+        </div>
 
         <div class="card-inner">
+          <!-- 卡片头部 -->
           <div class="card-header">
-            <div class="disease-title">
-              <el-icon
-                class="pin-icon"
-                :class="{ pinned: disease.is_pinned }"
-                @click.stop="togglePin(disease)"
-              >
-                <Star />
-              </el-icon>
-              <h3>{{ disease.disease_name }}</h3>
-              <span class="status-badge" :class="`badge-${disease.control_status}`">
-                {{ getStatusText(disease.control_status) }}
-              </span>
+            <div class="header-left">
+              <div class="disease-title-row">
+                <el-icon
+                  class="pin-icon"
+                  :class="{ pinned: disease.is_pinned }"
+                  @click.stop="togglePin(disease)"
+                >
+                  <Star />
+                </el-icon>
+                <h3 class="disease-name">{{ disease.disease_name }}</h3>
+              </div>
+              <div class="disease-meta">
+                <span v-if="disease.icd10_code" class="meta-tag icd-tag">
+                  <span class="tag-icon">📋</span>
+                  ICD-10: {{ disease.icd10_code }}
+                </span>
+                <span v-if="disease.diagnosis_date" class="meta-tag date-tag">
+                  <span class="tag-icon">📅</span>
+                  确诊于 {{ formatDate(disease.diagnosis_date) }}
+                </span>
+              </div>
             </div>
-            <el-dropdown @command="(cmd: string) => handleCommand(cmd, disease.id)" @click.stop>
-              <el-icon class="more-icon" @click.stop><MoreFilled /></el-icon>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="edit">编辑</el-dropdown-item>
-                  <el-dropdown-item command="delete" style="color: #f56c6c">删除</el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
+            <div class="header-right">
+              <div class="status-badge" :class="`badge-${disease.control_status}`">
+                <span class="badge-dot"></span>
+                <span class="badge-text">{{ getStatusText(disease.control_status) }}</span>
+              </div>
+              <el-dropdown @command="(cmd: string) => handleCommand(cmd, disease.id)" @click.stop>
+                <el-icon class="more-icon" @click.stop><MoreFilled /></el-icon>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="edit">编辑</el-dropdown-item>
+                    <el-dropdown-item command="delete" style="color: #f56c6c">删除</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </div>
           </div>
 
+          <!-- 卡片内容 -->
           <div class="card-content">
-            <div class="info-grid">
-              <div v-if="disease.icd10_code" class="info-chip">
-                <span class="chip-label">ICD-10</span>
-                <span class="chip-value">{{ disease.icd10_code }}</span>
-              </div>
-              <div v-if="disease.diagnosis_date" class="info-chip">
-                <span class="chip-label">诊断日期</span>
-                <span class="chip-value">{{ formatDate(disease.diagnosis_date) }}</span>
+            <!-- 医院信息 -->
+            <div v-if="disease.diagnosis_hospital" class="info-item hospital-info">
+              <div class="info-icon">🏥</div>
+              <div class="info-content">
+                <span class="info-label">诊疗医院</span>
+                <span class="info-value">{{ disease.diagnosis_hospital }}</span>
               </div>
             </div>
-            <div v-if="disease.diagnosis_hospital" class="info-row">
-              <span class="row-icon">🏥</span>
-              <span class="row-text">{{ disease.diagnosis_hospital }}</span>
+            <!-- 治疗方案 -->
+            <div v-if="disease.current_treatment" class="info-item treatment-info">
+              <div class="info-icon">💊</div>
+              <div class="info-content">
+                <span class="info-label">当前治疗</span>
+                <span class="info-value treatment-text">{{ disease.current_treatment }}</span>
+              </div>
             </div>
-            <div v-if="disease.current_treatment" class="info-row treatment">
-              <span class="row-icon">💊</span>
-              <span class="row-text">{{ disease.current_treatment }}</span>
+            <!-- 指标预览 -->
+            <div v-if="disease.indicators && disease.indicators.length > 0" class="indicators-preview">
+              <div class="preview-header">
+                <span class="preview-icon">📊</span>
+                <span class="preview-title">监控指标</span>
+                <span class="preview-count">{{ disease.indicators.length }}项</span>
+              </div>
+              <div class="indicator-tags">
+                <span
+                  v-for="indicator in disease.indicators.slice(0, 3)"
+                  :key="indicator.id"
+                  class="indicator-tag"
+                >
+                  {{ indicator.indicator_name }}
+                </span>
+                <span v-if="disease.indicators.length > 3" class="indicator-tag more">
+                  +{{ disease.indicators.length - 3 }}
+                </span>
+              </div>
             </div>
           </div>
 
+          <!-- 卡片底部操作 -->
           <div class="card-footer">
             <button class="action-btn btn-detail" @click.stop="viewDetails(disease)">
-              查看详情
+              <span class="btn-icon">📈</span>
+              <span class="btn-text">详情</span>
             </button>
             <button class="action-btn btn-indicator" @click.stop="showIndicatorDialog(disease)">
-              记录指标
+              <span class="btn-icon">✏️</span>
+              <span class="btn-text">记录</span>
             </button>
             <button class="action-btn btn-followup" @click.stop="showFollowupDialog(disease)">
-              安排随访
+              <span class="btn-icon">📋</span>
+              <span class="btn-text">复查</span>
             </button>
           </div>
         </div>
@@ -261,12 +305,12 @@
       </template>
     </el-dialog>
 
-    <!-- 安排随访对话框 -->
-    <el-dialog v-model="showFollowup" title="安排随访" width="600px">
+    <!-- 安排复查对话框 -->
+    <el-dialog v-model="showFollowup" title="安排复查" width="600px">
 
       <el-form ref="followupFormRef" :model="followupForm" label-width="100px">
-        <el-form-item label="随访频率" prop="frequency" required>
-          <el-select v-model="followupForm.frequency" placeholder="选择随访频率">
+        <el-form-item label="复查频率" prop="frequency" required>
+          <el-select v-model="followupForm.frequency" placeholder="选择复查频率">
             <el-option label="每周" value="weekly" />
             <el-option label="每月" value="monthly" />
             <el-option label="每季度" value="quarterly" />
@@ -275,7 +319,7 @@
           </el-select>
         </el-form-item>
 
-        <el-form-item label="下次随访日期" prop="next_followup_date" required>
+        <el-form-item label="下次复查日期" prop="next_followup_date" required>
           <el-date-picker
             v-model="followupForm.next_followup_date"
             type="date"
@@ -295,7 +339,7 @@
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="showFollowup = false">取消</el-button>
-          <el-button type="primary" @click="handleCreateFollowup">创建随访计划</el-button>
+          <el-button type="primary" @click="handleCreateFollowup">创建复查计划</el-button>
         </span>
       </template>
     </el-dialog>
@@ -544,7 +588,7 @@ const showIndicatorDialog = (disease: ChronicDisease) => {
   showIndicator.value = true
 }
 
-// 显示随访对话框
+// 显示复查对话框
 const showFollowupDialog = (disease: ChronicDisease) => {
   const nextDate = new Date()
   nextDate.setMonth(nextDate.getMonth() + 1)
@@ -633,7 +677,7 @@ const handleRecordIndicator = async () => {
   }
 }
 
-// 创建随访计划
+// 创建复查计划
 const handleCreateFollowup = async () => {
   if (!selectedForIndicator.value || !followupForm.value.next_followup_date) {
     ElMessage.warning('请填写必要信息')
@@ -642,7 +686,7 @@ const handleCreateFollowup = async () => {
 
   try {
     await chronicDiseaseAPI.followupPlans.create(selectedForIndicator.value.id, followupForm.value)
-    ElMessage.success('随访计划创建成功')
+    ElMessage.success('复查计划创建成功')
     showFollowup.value = false
     loadDiseases()
   } catch (error) {
@@ -674,7 +718,7 @@ const handleCommand = (command: string, diseaseId: number) => {
 
 // 删除慢性病
 const handleDeleteDisease = (diseaseId: number) => {
-  ElMessageBox.confirm('确认删除该慢性病记录？相关的指标、随访等数据也会一并删除。', '确认删除', {
+  ElMessageBox.confirm('确认删除该慢性病记录？相关的指标、复查等数据也会一并删除。', '确认删除', {
     confirmButtonText: '确认',
     cancelButtonText: '取消',
     type: 'warning'
@@ -724,6 +768,16 @@ const getStatusText = (status: string): string => {
   return statusMap[status as keyof typeof statusMap] || status
 }
 
+// 获取状态表情
+const getStatusEmoji = (status: string): string => {
+  const emojiMap = {
+    good: '✅',
+    fair: '⚡',
+    poor: '⚠️'
+  }
+  return emojiMap[status as keyof typeof emojiMap] || '📋'
+}
+
 // 格式化日期
 const formatDate = (date: string): string => {
   if (!date) return '-'
@@ -770,72 +824,151 @@ onMounted(() => {
 .disease-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
-  gap: 18px;
+  gap: 20px;
 }
 
 .disease-card {
   background: #fff;
-  border-radius: 14px;
+  border-radius: 16px;
   overflow: hidden;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   border: 1px solid transparent;
+  display: flex;
+  position: relative;
 
   &:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
   }
 
-  // 顶部色条 - 根据状态变色
-  .card-accent-bar {
-    height: 4px;
-    width: 100%;
+  // 左侧状态指示条
+  .status-indicator {
+    width: 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 18px;
+    position: relative;
+
+    .status-icon-wrapper {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 2;
+    }
+
+    .status-emoji {
+      font-size: 20px;
+    }
+
+    .status-line {
+      flex: 1;
+      width: 3px;
+      margin-top: 8px;
+      border-radius: 0 0 3px 3px;
+      min-height: 60px;
+    }
   }
 
-  &.status-good .card-accent-bar { background: linear-gradient(90deg, #67c23a, #95d475); }
-  &.status-fair .card-accent-bar { background: linear-gradient(90deg, #e6a23c, #f0c070); }
-  &.status-poor .card-accent-bar { background: linear-gradient(90deg, #f56c6c, #f89898); }
-  &.status-good { border-color: rgba(103, 194, 58, 0.2); }
-  &.status-fair { border-color: rgba(230, 162, 60, 0.2); }
-  &.status-poor { border-color: rgba(245, 108, 108, 0.2); }
+  // 状态颜色变体
+  &.status-good {
+    border-color: rgba(103, 194, 58, 0.15);
+    .status-indicator {
+      background: linear-gradient(180deg, rgba(103, 194, 58, 0.12) 0%, rgba(103, 194, 58, 0.04) 100%);
+      .status-icon-wrapper { background: rgba(103, 194, 58, 0.15); }
+      .status-line { background: linear-gradient(180deg, #67c23a, rgba(103, 194, 58, 0.3)); }
+    }
+  }
+  &.status-fair {
+    border-color: rgba(230, 162, 60, 0.15);
+    .status-indicator {
+      background: linear-gradient(180deg, rgba(230, 162, 60, 0.12) 0%, rgba(230, 162, 60, 0.04) 100%);
+      .status-icon-wrapper { background: rgba(230, 162, 60, 0.15); }
+      .status-line { background: linear-gradient(180deg, #e6a23c, rgba(230, 162, 60, 0.3)); }
+    }
+  }
+  &.status-poor {
+    border-color: rgba(245, 108, 108, 0.15);
+    .status-indicator {
+      background: linear-gradient(180deg, rgba(245, 108, 108, 0.12) 0%, rgba(245, 108, 108, 0.04) 100%);
+      .status-icon-wrapper { background: rgba(245, 108, 108, 0.15); }
+      .status-line { background: linear-gradient(180deg, #f56c6c, rgba(245, 108, 108, 0.3)); }
+    }
+  }
 
   .card-inner {
+    flex: 1;
     padding: 18px 20px 16px;
+    min-width: 0;
   }
 
   .card-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 14px;
+    align-items: flex-start;
+    margin-bottom: 16px;
 
-    .disease-title {
+    .header-left {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .disease-title-row {
       display: flex;
       align-items: center;
       gap: 8px;
+      margin-bottom: 8px;
+    }
 
-      h3 {
-        margin: 0;
-        font-size: 17px;
-        font-weight: 700;
-        color: #1a1a2e;
+    .disease-name {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: #1a1a2e;
+      letter-spacing: 0.3px;
+    }
+
+    .disease-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .meta-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+
+      .tag-icon {
+        font-size: 11px;
+      }
+
+      &.icd-tag {
+        background: rgba(64, 158, 255, 0.08);
+        color: #409eff;
+      }
+
+      &.date-tag {
+        background: rgba(144, 147, 153, 0.08);
+        color: #909399;
       }
     }
-  }
 
-  .more-icon {
-    cursor: pointer;
-    font-size: 18px;
-    color: #c0c4cc;
-    padding: 4px;
-    border-radius: 6px;
-    transition: all 0.2s;
-    flex-shrink: 0;
-
-    &:hover {
-      color: #606266;
-      background: #f5f7fa;
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
     }
   }
 
@@ -856,85 +989,169 @@ onMounted(() => {
     }
   }
 
+  .more-icon {
+    cursor: pointer;
+    font-size: 18px;
+    color: #c0c4cc;
+    padding: 4px;
+    border-radius: 6px;
+    transition: all 0.2s;
+
+    &:hover {
+      color: #606266;
+      background: #f5f7fa;
+    }
+  }
+
   // 状态徽章
   .status-badge {
     display: inline-flex;
     align-items: center;
-    padding: 2px 10px;
+    gap: 6px;
+    padding: 4px 12px;
     border-radius: 20px;
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 600;
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
 
     &.badge-good {
-      background: rgba(103, 194, 58, 0.12);
-      color: #529b2e;
+      background: rgba(103, 194, 58, 0.1);
+      color: #67c23a;
+      .badge-dot { background: #67c23a; }
     }
     &.badge-fair {
-      background: rgba(230, 162, 60, 0.12);
-      color: #b88230;
+      background: rgba(230, 162, 60, 0.1);
+      color: #e6a23c;
+      .badge-dot { background: #e6a23c; }
     }
     &.badge-poor {
-      background: rgba(245, 108, 108, 0.12);
-      color: #c45656;
+      background: rgba(245, 108, 108, 0.1);
+      color: #f56c6c;
+      .badge-dot { background: #f56c6c; }
     }
   }
 
   .card-content {
     margin-bottom: 14px;
 
-    .info-grid {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 10px;
-    }
-
-    .info-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      background: #f5f7fa;
-      border-radius: 8px;
-      padding: 4px 10px;
-      font-size: 13px;
-
-      .chip-label {
-        color: #909399;
-        font-size: 11px;
-      }
-
-      .chip-value {
-        color: #303133;
-        font-weight: 500;
-      }
-    }
-
-    .info-row {
+    .info-item {
       display: flex;
       align-items: flex-start;
-      gap: 6px;
-      font-size: 13px;
-      color: #606266;
-      margin-bottom: 6px;
-      line-height: 1.5;
+      gap: 10px;
+      padding: 10px 12px;
+      background: #f8fafc;
+      border-radius: 10px;
+      margin-bottom: 8px;
+      border: 1px solid rgba(0, 0, 0, 0.03);
 
-      .row-icon {
-        font-size: 14px;
+      .info-icon {
+        font-size: 18px;
         flex-shrink: 0;
-        margin-top: 1px;
+        margin-top: 2px;
       }
 
-      .row-text {
+      .info-content {
         flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
       }
 
-      &.treatment .row-text {
+      .info-label {
+        font-size: 11px;
         color: #909399;
-        font-size: 12px;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .info-value {
+        font-size: 14px;
+        color: #303133;
+        font-weight: 500;
+        line-height: 1.4;
+
+        &.treatment-text {
+          color: #606266;
+          font-weight: 400;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+      }
+
+      &.hospital-info {
+        background: linear-gradient(135deg, rgba(64, 158, 255, 0.06) 0%, rgba(64, 158, 255, 0.02) 100%);
+        border-color: rgba(64, 158, 255, 0.08);
+      }
+
+      &.treatment-info {
+        background: linear-gradient(135deg, rgba(103, 194, 58, 0.06) 0%, rgba(103, 194, 58, 0.02) 100%);
+        border-color: rgba(103, 194, 58, 0.08);
+      }
+    }
+
+    .indicators-preview {
+      padding: 12px;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      border-radius: 10px;
+      border: 1px solid rgba(0, 0, 0, 0.04);
+
+      .preview-header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 10px;
+
+        .preview-icon {
+          font-size: 14px;
+        }
+
+        .preview-title {
+          font-size: 12px;
+          color: #606266;
+          font-weight: 500;
+        }
+
+        .preview-count {
+          margin-left: auto;
+          font-size: 11px;
+          color: #909399;
+          background: rgba(0, 0, 0, 0.04);
+          padding: 2px 8px;
+          border-radius: 10px;
+        }
+      }
+
+      .indicator-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+
+        .indicator-tag {
+          display: inline-flex;
+          align-items: center;
+          padding: 4px 10px;
+          background: #fff;
+          border-radius: 6px;
+          font-size: 12px;
+          color: #606266;
+          font-weight: 500;
+          border: 1px solid rgba(0, 0, 0, 0.06);
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+
+          &.more {
+            background: rgba(64, 158, 255, 0.08);
+            color: #409eff;
+            border-color: rgba(64, 158, 255, 0.15);
+          }
+        }
       }
     }
   }
@@ -942,20 +1159,28 @@ onMounted(() => {
   .card-footer {
     display: flex;
     gap: 8px;
-    padding-top: 12px;
+    padding-top: 14px;
     border-top: 1px solid #f0f2f5;
   }
 
   .action-btn {
     flex: 1;
-    padding: 6px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 0;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
     background: transparent;
+
+    .btn-icon {
+      font-size: 14px;
+    }
 
     &.btn-detail {
       color: #409eff;

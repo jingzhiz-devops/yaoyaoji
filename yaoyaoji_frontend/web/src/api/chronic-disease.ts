@@ -58,21 +58,21 @@ export const chronicDiseaseAPI = {
       service.get(`/chronic-diseases/${diseaseId}/indicator-records`, { params })
   },
 
-  // 随访计划管理
+  // 复查计划管理
   followupPlans: {
-    // 创建随访计划
+    // 创建复查计划
     create: (diseaseId: number, data: Omit<FollowupPlan, 'id' | 'disease_id' | 'created_at' | 'updated_at'>) =>
       service.post(`/chronic-diseases/${diseaseId}/followup-plans`, data),
     
-    // 获取随访计划列表
+    // 获取复查计划列表
     list: (diseaseId: number) =>
       service.get(`/chronic-diseases/${diseaseId}/followup-plans`),
     
-    // 更新随访计划
+    // 更新复查计划
     update: (diseaseId: number, planId: number, data: Partial<Omit<FollowupPlan, 'id' | 'disease_id' | 'created_at' | 'updated_at'>>) =>
       service.put(`/chronic-diseases/${diseaseId}/followup-plans/${planId}`, data),
     
-    // 删除随访计划
+    // 删除复查计划
     delete: (diseaseId: number, planId: number) =>
       service.delete(`/chronic-diseases/${diseaseId}/followup-plans/${planId}`)
   },

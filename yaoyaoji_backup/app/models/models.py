@@ -26,6 +26,7 @@ class User(Base):
     is_active = Column(Boolean, default=True, index=True)  # 账号是否启用
     is_family_admin = Column(Boolean, default=True)  # 是否家庭管理员
     family_id = Column(Integer, ForeignKey("families.id"), nullable=True)  # 所属家庭
+    feishu_webhook = Column(String(500), nullable=True)  # 飞书机器人Webhook地址
     created_at = Column(DateTime, default=datetime.now)
     last_login = Column(DateTime, nullable=True)  # 最后登录时间
     
@@ -465,7 +466,7 @@ class IndicatorRecord(Base):
 
 
 class FollowupPlan(Base):
-    """随访计划表"""
+    """复查计划表"""
     __tablename__ = "followup_plans"
     
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)

@@ -1,7 +1,7 @@
 <template>
   <div class="followup-schedule-view">
     <div class="page-header">
-      <h1>随访日程管理</h1>
+      <h1>复查日程管理</h1>
       <el-select
         v-model="filterStatus"
         placeholder="筛选状态"
@@ -14,7 +14,7 @@
       </el-select>
     </div>
 
-    <!-- 按时间线展示随访计划 -->
+    <!-- 按时间线展示复查计划 -->
     <div class="timeline-container">
       <div v-if="sortedPlans.length > 0">
         <div
@@ -41,11 +41,11 @@
 
             <div class="plan-details">
               <div class="detail-item">
-                <span class="label">下次随访:</span>
+                <span class="label">下次复查:</span>
                 <span class="value">{{ formatDate(plan.next_followup_date) }}</span>
               </div>
               <div v-if="plan.last_followup_date" class="detail-item">
-                <span class="label">上次随访:</span>
+                <span class="label">上次复查:</span>
                 <span class="value">{{ formatDate(plan.last_followup_date) }}</span>
               </div>
               <div v-if="plan.responsible_doctor" class="detail-item">
@@ -57,20 +57,20 @@
             <div class="plan-actions">
               <el-button size="small" @click="editFollowupPlan(plan)">编辑</el-button>
               <el-button size="small" type="primary" @click="recordFollowup(plan)">
-                记录随访
+                记录复查
               </el-button>
               <el-button size="small" type="danger" @click="deletePlan(plan)">删除</el-button>
             </div>
           </div>
         </div>
       </div>
-      <el-empty v-else description="暂无随访计划" />
+      <el-empty v-else description="暂无复查计划" />
     </div>
 
-    <!-- 记录随访对话框 -->
-    <el-dialog v-model="followupDialogVisible" title="记录随访" width="700px">
+    <!-- 记录复查对话框 -->
+    <el-dialog v-model="followupDialogVisible" title="记录复查" width="700px">
       <el-form ref="followupRecordFormRef" :model="followupRecord" label-width="100px">
-        <el-form-item label="随访日期" prop="followup_date" required>
+        <el-form-item label="复查日期" prop="followup_date" required>
           <el-date-picker
             v-model="followupRecord.followup_date"
             type="datetime"
@@ -137,7 +137,7 @@
             v-model="followupRecord.next_plan"
             type="textarea"
             rows="2"
-            placeholder="下一步治疗或随访计划"
+            placeholder="下一步治疗或复查计划"
           />
         </el-form-item>
       </el-form>
@@ -150,11 +150,11 @@
       </template>
     </el-dialog>
 
-    <!-- 编辑随访计划对话框 -->
-    <el-dialog v-model="editPlanDialogVisible" title="编辑随访计划" width="600px">
+    <!-- 编辑复查计划对话框 -->
+    <el-dialog v-model="editPlanDialogVisible" title="编辑复查计划" width="600px">
       <el-form ref="editPlanFormRef" :model="editPlan" label-width="100px">
-        <el-form-item label="随访频率" prop="frequency" required>
-          <el-select v-model="editPlan.frequency" placeholder="选择随访频率">
+        <el-form-item label="复查频率" prop="frequency" required>
+          <el-select v-model="editPlan.frequency" placeholder="选择复查频率">
             <el-option label="每周" value="weekly" />
             <el-option label="每月" value="monthly" />
             <el-option label="每季度" value="quarterly" />
@@ -163,7 +163,7 @@
           </el-select>
         </el-form-item>
 
-        <el-form-item label="下次随访日期" prop="next_followup_date" required>
+        <el-form-item label="下次复查日期" prop="next_followup_date" required>
           <el-date-picker
             v-model="editPlan.next_followup_date"
             type="date"
@@ -226,13 +226,13 @@ const editPlan = ref({
 const followupRecordFormRef = ref()
 const editPlanFormRef = ref()
 
-// 加载所有疾病和随访计划
+// 加载所有疾病和复查计划
 const loadData = async () => {
   try {
     const response = await chronicDiseaseAPI.list({ limit: 100 })
     diseases.value = response.data
 
-    // 收集所有随访计划
+    // 收集所有复查计划
     allPlans.value = []
     for (const disease of diseases.value) {
       const plansResponse = await chronicDiseaseAPI.followupPlans.list(disease.id)
@@ -243,7 +243,7 @@ const loadData = async () => {
   }
 }
 
-// 排序的随访计划
+// 排序的复查计划
 const sortedPlans = computed(() => {
   let filtered = [...allPlans.value]
 
@@ -275,7 +275,7 @@ const getIndicatorsForDisease = (diseaseId: number) => {
   return disease?.indicators || []
 }
 
-// 获取随访计划类名
+// 获取复查计划类名
 const getPlanClass = (plan: FollowupPlan): string => {
   const days = Math.floor(
     (new Date(plan.next_followup_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
@@ -285,7 +285,7 @@ const getPlanClass = (plan: FollowupPlan): string => {
   return 'normal'
 }
 
-// 获取随访计划状态类型
+// 获取复查计划状态类型
 const getPlanStatusType = (
   nextDate: string
 ): 'success' | 'warning' | 'danger' | 'info' => {
@@ -297,15 +297,15 @@ const getPlanStatusType = (
   return 'success'
 }
 
-// 获取随访计划状态文本
+// 获取复查计划状态文本
 const getPlanStatusText = (nextDate: string): string => {
   const days = Math.floor(
     (new Date(nextDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
   )
   if (days < 0) return `已过期 ${Math.abs(days)} 天`
-  if (days === 0) return '今天随访'
-  if (days < 7) return `${days} 天后随访`
-  return `${days} 天后随访`
+  if (days === 0) return '今天复查'
+  if (days < 7) return `${days} 天后复查`
+  return `${days} 天后复查`
 }
 
 // 记录随访
@@ -343,7 +343,7 @@ const saveFollowupRecord = async () => {
         next_plan: followupRecord.value.next_plan || undefined
       }
     )
-    ElMessage.success('随访记录保存成功')
+    ElMessage.success('复查记录保存成功')
     followupDialogVisible.value = false
     loadData()
   } catch (error) {
@@ -351,7 +351,7 @@ const saveFollowupRecord = async () => {
   }
 }
 
-// 编辑随访计划
+// 编辑复查计划
 const editFollowupPlan = (plan: FollowupPlan) => {
   selectedPlanForEdit.value = plan
   editPlan.value = {
@@ -363,7 +363,7 @@ const editFollowupPlan = (plan: FollowupPlan) => {
   editPlanDialogVisible.value = true
 }
 
-// 保存编辑的随访计划
+// 保存编辑的复查计划
 const saveEditPlan = async () => {
   if (!selectedPlanForEdit.value) return
 
@@ -381,9 +381,9 @@ const saveEditPlan = async () => {
   }
 }
 
-// 删除随访计划
+// 删除复查计划
 const deleteFollowupPlan = (plan: FollowupPlan) => {
-  ElMessageBox.confirm('确认删除该随访计划？', 'Warning', {
+  ElMessageBox.confirm('确认删除该复查计划？', 'Warning', {
     confirmButtonText: 'OK',
     cancelButtonText: 'Cancel',
     type: 'warning'

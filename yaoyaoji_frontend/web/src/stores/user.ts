@@ -37,6 +37,15 @@ export const useUserStore = defineStore('user', () => {
     heartbeatService.connect(res.access_token)
   }
 
+  // Google 第三方登录
+  async function googleLogin(credential: string) {
+    const res: any = await authAPI.googleLogin(credential)
+    token.value = res.access_token
+    localStorage.setItem(TOKEN_KEY, res.access_token)
+    await fetchUserInfo()
+    heartbeatService.connect(res.access_token)
+  }
+
   // 注册
   async function register(data: { username: string; password: string; email?: string; captcha_id?: string; captcha_code?: string }) {
     await authAPI.register(data)
@@ -76,6 +85,7 @@ export const useUserStore = defineStore('user', () => {
     adminUser,
     adminToken,
     login,
+    googleLogin,
     adminLogin,
     register,
     fetchUserInfo,
