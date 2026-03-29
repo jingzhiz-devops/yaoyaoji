@@ -55,6 +55,12 @@ export const authAPI = {
   changeAvatar: (avatarUrl: string) =>
     service.patch('/users/change-avatar', null, {
       params: { avatar_url: avatarUrl }
+    }),
+  
+  // 更新个人信息（手机号、邮箱）
+  updateProfile: (data: { phone?: string; email?: string; feishu_webhook?: string }) =>
+    service.patch('/users/update-profile', null, {
+      params: { phone: data.phone, email: data.email, feishu_webhook: data.feishu_webhook }
     })
 }
 
@@ -284,4 +290,13 @@ export const aiDoctorAPI = {
   // AI疾病查询
   queryDisease: (diseaseName: string) =>
     service.post('/ai/query-disease', { disease_name: diseaseName })
+}
+
+// 飞书通知相关
+export const feishuAPI = {
+  // 发送用药提醒到飞书
+  sendReminder: (data: { medicine_name: string; reminder_time: string; notes?: string }) =>
+    service.post('/feishu/send-reminder', null, {
+      params: data
+    })
 }

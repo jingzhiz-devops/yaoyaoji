@@ -7,6 +7,8 @@ export interface User {
   id: number
   username: string
   email?: string
+  phone?: string  // 手机号
+  feishu_webhook?: string  // 飞书机器人Webhook
   avatar?: string
   birth_date?: string
   real_name?: string

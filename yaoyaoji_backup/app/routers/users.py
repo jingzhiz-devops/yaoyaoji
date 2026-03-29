@@ -312,3 +312,77 @@ async def change_avatar(
     db.commit()
     
     return MessageResponse(message="头像修改成功")
+
+
+@router.patch("/update-profile", response_model=UserResponse)
+async def update_profile(
+    phone: str = None,
+    email: str = None,
+    feishu_webhook: str = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """更新个人信息（手机号、邮箱、飞书Webhook）"""
+    # 验证手机号格式
+    if phone is not None:
+        if phone and not phone.isdigit():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="手机号格式不正确"
+            )
+        if phone and len(phone) != 11:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="手机号必须是11位数字"
+            )
+        # 检查手机号是否已被其他用户使用
+        if phone:
+            existing_phone = db.query(User).filter(
+                User.phone == phone,
+                User.id != current_user.id
+            ).first()
+            if existing_phone:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="该手机号已被其他用户使用"
+                )
+        current_user.phone = phone or None
+    
+    # 验证邮箱格式
+    if email is not None:
+        import re
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if email and not re.match(email_pattern, email):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="邮箱格式不正确"
+            )
+        # 检查邮箱是否已被其他用户使用
+        if email:
+            existing_email = db.query(User).filter(
+                User.email == email,
+                User.id != current_user.id
+            ).first()
+            if existing_email:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="该邮箱已被其他用户使用"
+                )
+        current_user.email = email or None
+    
+    # 验证飞书Webhook格式
+    if feishu_webhook is not None:
+        if feishu_webhook:
+            import re
+            # 飞书Webhook URL 格式: https://open.feishu.cn/open-apis/bot/v2/hook/xxx
+            if not feishu_webhook.startswith('https://open.feishu.cn/open-apis/bot/'):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="飞书Webhook地址格式不正确，应以 https://open.feishu.cn/open-apis/bot/ 开头"
+                )
+        current_user.feishu_webhook = feishu_webhook or None
+    
+    db.commit()
+    db.refresh(current_user)
+    
+    return current_user

@@ -463,7 +463,7 @@ const reminderItems = computed<ReminderItem[]>(() => {
       key: `followup-${plan.id}`,
       type: 'followup',
       icon: '🏥',
-      title: `随访计划：${plan.disease_name || '随访'}`,
+      title: `复查计划：${plan.disease_name || '复查'}`,
       desc: plan.responsible_doctor ? `医生: ${plan.responsible_doctor}` : plan.frequency || '',
       tag,
       tagType,
@@ -778,7 +778,7 @@ async function fetchFollowupPlans() {
     }
     followupPlans.value = allPlans
   } catch (error) {
-    console.error('获取随访计划失败:', error)
+    console.error('获取复查计划失败:', error)
   }
 }
 

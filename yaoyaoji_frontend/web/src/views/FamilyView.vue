@@ -84,6 +84,9 @@
                         <span class="member-age" v-if="member.age">{{ member.age }}岁</span>
                         <span class="member-age no-age" v-else>年龄未知</span>
                       </div>
+                      <div class="member-notes" v-if="member.notes">
+                        <span class="notes-text">{{ member.notes }}</span>
+                      </div>
                       <div class="member-actions">
                         <el-tooltip content="编辑" placement="top">
                           <button class="action-btn edit-btn" @click="editMember(member)">
@@ -852,6 +855,21 @@ function getMemberGradient(role: string): string {
 .member-age.no-age {
   color: var(--color-text-light, #9ca3af);
   font-style: italic;
+}
+
+.member-notes {
+  margin-top: 4px;
+  padding: 0 4px;
+}
+
+.member-notes .notes-text {
+  font-size: 12px;
+  color: var(--color-text-secondary, #6b7280);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-all;
 }
 
 .member-actions {

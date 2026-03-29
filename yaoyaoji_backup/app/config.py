@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     DEEPSEEK_API_KEY: str = ""
     DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
     
+    # 飞书配置
+    FEISHU_APP_ID: str = ""
+    FEISHU_APP_SECRET: str = ""
+    
     # 应用配置
     APP_NAME: str = "药药记 API"
     APP_VERSION: str = "1.0.0"

@@ -176,7 +176,7 @@
             </button>
             <button class="action-btn btn-followup" @click.stop="showFollowupDialog(disease)">
               <span class="btn-icon">📋</span>
-              <span class="btn-text">随访</span>
+              <span class="btn-text">复查</span>
             </button>
           </div>
         </div>
@@ -305,12 +305,12 @@
       </template>
     </el-dialog>
 
-    <!-- 安排随访对话框 -->
-    <el-dialog v-model="showFollowup" title="安排随访" width="600px">
+    <!-- 安排复查对话框 -->
+    <el-dialog v-model="showFollowup" title="安排复查" width="600px">
 
       <el-form ref="followupFormRef" :model="followupForm" label-width="100px">
-        <el-form-item label="随访频率" prop="frequency" required>
-          <el-select v-model="followupForm.frequency" placeholder="选择随访频率">
+        <el-form-item label="复查频率" prop="frequency" required>
+          <el-select v-model="followupForm.frequency" placeholder="选择复查频率">
             <el-option label="每周" value="weekly" />
             <el-option label="每月" value="monthly" />
             <el-option label="每季度" value="quarterly" />
@@ -319,7 +319,7 @@
           </el-select>
         </el-form-item>
 
-        <el-form-item label="下次随访日期" prop="next_followup_date" required>
+        <el-form-item label="下次复查日期" prop="next_followup_date" required>
           <el-date-picker
             v-model="followupForm.next_followup_date"
             type="date"
@@ -339,7 +339,7 @@
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="showFollowup = false">取消</el-button>
-          <el-button type="primary" @click="handleCreateFollowup">创建随访计划</el-button>
+          <el-button type="primary" @click="handleCreateFollowup">创建复查计划</el-button>
         </span>
       </template>
     </el-dialog>
@@ -588,7 +588,7 @@ const showIndicatorDialog = (disease: ChronicDisease) => {
   showIndicator.value = true
 }
 
-// 显示随访对话框
+// 显示复查对话框
 const showFollowupDialog = (disease: ChronicDisease) => {
   const nextDate = new Date()
   nextDate.setMonth(nextDate.getMonth() + 1)
@@ -677,7 +677,7 @@ const handleRecordIndicator = async () => {
   }
 }
 
-// 创建随访计划
+// 创建复查计划
 const handleCreateFollowup = async () => {
   if (!selectedForIndicator.value || !followupForm.value.next_followup_date) {
     ElMessage.warning('请填写必要信息')
@@ -686,7 +686,7 @@ const handleCreateFollowup = async () => {
 
   try {
     await chronicDiseaseAPI.followupPlans.create(selectedForIndicator.value.id, followupForm.value)
-    ElMessage.success('随访计划创建成功')
+    ElMessage.success('复查计划创建成功')
     showFollowup.value = false
     loadDiseases()
   } catch (error) {
@@ -718,7 +718,7 @@ const handleCommand = (command: string, diseaseId: number) => {
 
 // 删除慢性病
 const handleDeleteDisease = (diseaseId: number) => {
-  ElMessageBox.confirm('确认删除该慢性病记录？相关的指标、随访等数据也会一并删除。', '确认删除', {
+  ElMessageBox.confirm('确认删除该慢性病记录？相关的指标、复查等数据也会一并删除。', '确认删除', {
     confirmButtonText: '确认',
     cancelButtonText: '取消',
     type: 'warning'

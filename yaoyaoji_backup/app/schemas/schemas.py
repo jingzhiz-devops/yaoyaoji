@@ -42,6 +42,8 @@ class UserLogin(BaseModel):
 class UserResponse(UserBase):
     """用户响应Schema"""
     id: int
+    phone: Optional[str] = None
+    feishu_webhook: Optional[str] = None  # 飞书机器人Webhook
     avatar: Optional[str] = None
     birth_date: Optional[date] = None
     real_name: Optional[str] = None
@@ -542,7 +544,7 @@ class IndicatorRecordResponse(IndicatorRecordBase):
 
 
 class FollowupPlanBase(BaseModel):
-    """随访计划基础Schema"""
+    """复查计划基础Schema"""
     frequency: str = Field(..., description="频率: weekly/monthly/quarterly/yearly")
     next_followup_date: date = Field(..., description="下次随访日期")
     responsible_doctor: Optional[str] = Field(None, max_length=100, description="负责医生")
@@ -553,12 +555,12 @@ class FollowupPlanBase(BaseModel):
 
 
 class FollowupPlanCreate(FollowupPlanBase):
-    """随访计划创建 Schema"""
+    """复查计划创建 Schema"""
     pass
 
 
 class FollowupPlanResponse(FollowupPlanBase):
-    """随访计划响应Schema"""
+    """复查计划响应Schema"""
     id: int
     disease_id: int
     last_followup_date: Optional[date] = None

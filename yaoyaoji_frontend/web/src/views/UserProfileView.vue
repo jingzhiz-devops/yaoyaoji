@@ -29,7 +29,19 @@
                 </el-upload>
               </div>
               <h3 class="username">{{ userStore.user?.username }}</h3>
-              <p class="email">{{ userStore.user?.email || '未设置邮箱' }}</p>
+              <div class="contact-info">
+                <p class="info-item" v-if="userStore.user?.phone">
+                  <el-icon><Iphone /></el-icon>
+                  {{ userStore.user.phone }}
+                </p>
+                <p class="info-item" v-if="userStore.user?.email">
+                  <el-icon><Message /></el-icon>
+                  {{ userStore.user.email }}
+                </p>
+                <p class="info-item empty" v-if="!userStore.user?.phone && !userStore.user?.email">
+                  未设置联系方式
+                </p>
+              </div>
               <el-tag class="role-tag" effect="dark" round>普通用户</el-tag>
             </div>
             
@@ -48,12 +60,12 @@
         </el-col>
         
         <el-col :span="16">
-          <!-- 安全设置 -->
+          <!-- 个人信息设置 -->
           <el-card class="security-card" shadow="hover">
             <template #header>
               <div class="card-header">
-                <el-icon><Lock /></el-icon>
-                <span>账号安全</span>
+                <el-icon><User /></el-icon>
+                <span>个人信息</span>
               </div>
             </template>
             
@@ -63,10 +75,32 @@
                   <el-icon><User /></el-icon>
                 </div>
                 <div class="item-content">
-                  <div class="item-title">修改用户名</div>
+                  <div class="item-title">用户名</div>
                   <div class="item-desc">当前用户名：<strong>{{ userStore.user?.username }}</strong></div>
                 </div>
                 <el-button type="primary" plain @click="showChangeUsernameDialog">修改</el-button>
+              </div>
+              
+              <div class="security-item">
+                <div class="item-icon">
+                  <el-icon><Iphone /></el-icon>
+                </div>
+                <div class="item-content">
+                  <div class="item-title">手机号</div>
+                  <div class="item-desc">当前手机号：<strong>{{ userStore.user?.phone || '未设置' }}</strong></div>
+                </div>
+                <el-button type="primary" plain @click="showEditPhoneDialog">修改</el-button>
+              </div>
+              
+              <div class="security-item">
+                <div class="item-icon">
+                  <el-icon><Message /></el-icon>
+                </div>
+                <div class="item-content">
+                  <div class="item-title">邮箱</div>
+                  <div class="item-desc">当前邮箱：<strong>{{ userStore.user?.email || '未设置' }}</strong></div>
+                </div>
+                <el-button type="primary" plain @click="showEditEmailDialog">修改</el-button>
               </div>
               
               <div class="security-item">
@@ -130,6 +164,38 @@
         <el-button type="primary" @click="handleChangePassword" :loading="submitting">确定修改</el-button>
       </template>
     </el-dialog>
+
+    <!-- 修改手机号对话框 -->
+    <el-dialog v-model="phoneDialogVisible" title="修改手机号" width="400px" class="custom-dialog">
+      <el-form :model="phoneForm" :rules="phoneRules" ref="phoneFormRef" label-position="top">
+        <el-form-item label="手机号" prop="phone">
+          <el-input v-model="phoneForm.phone" placeholder="请输入11位手机号" size="large">
+            <template #prefix><el-icon><Iphone /></el-icon></template>
+          </el-input>
+        </el-form-item>
+        <div class="form-tip">手机号用于接收飞书用药提醒通知</div>
+      </el-form>
+      <template #footer>
+        <el-button @click="phoneDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleUpdatePhone" :loading="submitting">确定修改</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 修改邮箱对话框 -->
+    <el-dialog v-model="emailDialogVisible" title="修改邮箱" width="400px" class="custom-dialog">
+      <el-form :model="emailForm" :rules="emailRules" ref="emailFormRef" label-position="top">
+        <el-form-item label="邮箱" prop="email">
+          <el-input v-model="emailForm.email" placeholder="请输入邮箱地址" size="large">
+            <template #prefix><el-icon><Message /></el-icon></template>
+          </el-input>
+        </el-form-item>
+        <div class="form-tip">邮箱用于接收飞书用药提醒通知</div>
+      </el-form>
+      <template #footer>
+        <el-button @click="emailDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleUpdateEmail" :loading="submitting">确定修改</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -139,7 +205,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import { authAPI, uploadAPI } from '@/api'
-import { User, Lock, Key, Check, Camera } from '@element-plus/icons-vue'
+import { User, Lock, Key, Check, Camera, Iphone, Message } from '@element-plus/icons-vue'
 import type { UploadRequestOptions } from 'element-plus'
 
 const router = useRouter()
@@ -147,10 +213,14 @@ const userStore = useUserStore()
 
 const usernameDialogVisible = ref(false)
 const passwordDialogVisible = ref(false)
+const phoneDialogVisible = ref(false)
+const emailDialogVisible = ref(false)
 const submitting = ref(false)
 
 const usernameFormRef = ref()
 const passwordFormRef = ref()
+const phoneFormRef = ref()
+const emailFormRef = ref()
 
 const usernameForm = ref({
   newUsername: '',
@@ -161,6 +231,14 @@ const passwordForm = ref({
   oldPassword: '',
   newPassword: '',
   confirmPassword: ''
+})
+
+const phoneForm = ref({
+  phone: ''
+})
+
+const emailForm = ref({
+  email: ''
 })
 
 const avatarUploading = ref(false)
@@ -251,6 +329,20 @@ const passwordRules = {
   ]
 }
 
+const phoneRules = {
+  phone: [
+    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的11位手机号', trigger: 'blur' }
+  ]
+}
+
+const emailRules = {
+  email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
+    { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
+  ]
+}
+
 // 格式化日期
 function formatDate(dateStr: string | undefined) {
   if (!dateStr) return '-'
@@ -305,6 +397,22 @@ function showChangePasswordDialog() {
   passwordDialogVisible.value = true
 }
 
+// 显示修改手机号对话框
+function showEditPhoneDialog() {
+  phoneForm.value = {
+    phone: userStore.user?.phone || ''
+  }
+  phoneDialogVisible.value = true
+}
+
+// 显示修改邮箱对话框
+function showEditEmailDialog() {
+  emailForm.value = {
+    email: userStore.user?.email || ''
+  }
+  emailDialogVisible.value = true
+}
+
 // 修改用户名
 async function handleChangeUsername() {
   await usernameFormRef.value.validate(async (valid: boolean) => {
@@ -342,6 +450,44 @@ async function handleChangePassword() {
         }, 1500)
       } catch (error: any) {
         ElMessage.error(error.response?.data?.detail || '密码修改失败')
+      } finally {
+        submitting.value = false
+      }
+    }
+  })
+}
+
+// 更新手机号
+async function handleUpdatePhone() {
+  await phoneFormRef.value.validate(async (valid: boolean) => {
+    if (valid) {
+      submitting.value = true
+      try {
+        await authAPI.updateProfile({ phone: phoneForm.value.phone })
+        await userStore.fetchUserInfo()
+        ElMessage.success('手机号修改成功')
+        phoneDialogVisible.value = false
+      } catch (error: any) {
+        ElMessage.error(error.response?.data?.detail || '手机号修改失败')
+      } finally {
+        submitting.value = false
+      }
+    }
+  })
+}
+
+// 更新邮箱
+async function handleUpdateEmail() {
+  await emailFormRef.value.validate(async (valid: boolean) => {
+    if (valid) {
+      submitting.value = true
+      try {
+        await authAPI.updateProfile({ email: emailForm.value.email })
+        await userStore.fetchUserInfo()
+        ElMessage.success('邮箱修改成功')
+        emailDialogVisible.value = false
+      } catch (error: any) {
+        ElMessage.error(error.response?.data?.detail || '邮箱修改失败')
       } finally {
         submitting.value = false
       }
@@ -463,6 +609,28 @@ onMounted(async () => {
   margin: 0 0 4px 0;
   font-size: 24px;
   color: var(--color-text-main);
+}
+
+.contact-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.info-item {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.info-item.empty {
+  color: var(--color-text-light);
+  font-style: italic;
 }
 
 .email {

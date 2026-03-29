@@ -108,6 +108,11 @@
           <ExerciseRecommendations :disease-id="diseaseId" />
         </el-tab-pane>
 
+        <!-- 胰岛素科普（仅糖尿病显示） -->
+        <el-tab-pane v-if="disease?.disease_name?.includes('糖尿病')" label="💉 胰岛素科普" name="insulin">
+          <InsulinEducation />
+        </el-tab-pane>
+
         <!-- 并发症管理 -->
         <el-tab-pane label="⚠️ 并发症" name="complications">
           <ComplicationManager :disease-id="diseaseId" />
@@ -118,8 +123,8 @@
           <ScheduleView />
         </el-tab-pane>
 
-        <!-- 随访计划 -->
-        <el-tab-pane label="📋 随访计划" name="followup">
+        <!-- 复查计划 -->
+        <el-tab-pane label="📋 复查计划" name="followup">
           <div v-if="disease.followup_plans && disease.followup_plans.length > 0" class="plans-list">
             <div v-for="plan in disease.followup_plans" :key="plan.id" class="plan-item">
               <div class="plan-header">
@@ -129,8 +134,8 @@
                 </el-tag>
               </div>
               <div class="plan-info">
-                <div>下次随访: {{ formatDate(plan.next_followup_date) }}</div>
-                <div v-if="plan.last_followup_date">上次随访: {{ formatDate(plan.last_followup_date) }}</div>
+                <div>下次复查: {{ formatDate(plan.next_followup_date) }}</div>
+                <div v-if="plan.last_followup_date">上次复查: {{ formatDate(plan.last_followup_date) }}</div>
                 <div v-if="plan.responsible_doctor">医生: {{ plan.responsible_doctor }}</div>
                 <div>提前 {{ plan.reminder_days }} 天提醒</div>
                 <div v-if="plan.notes" class="plan-notes">📝 {{ plan.notes }}</div>
@@ -141,9 +146,9 @@
               </div>
             </div>
           </div>
-          <el-empty v-else description="暂无随访计划" />
+          <el-empty v-else description="暂无复查计划" />
           <div class="card-actions">
-            <el-button type="primary" @click="openCreatePlan">创建随访计划</el-button>
+            <el-button type="primary" @click="openCreatePlan">创建复查计划</el-button>
           </div>
         </el-tab-pane>
 
@@ -223,10 +228,10 @@
       </template>
     </el-dialog>
 
-    <!-- 随访计划对话框 -->
-    <el-dialog v-model="planDialogVisible" :title="editingPlanId ? '编辑随访计划' : '创建随访计划'" width="600px">
+    <!-- 复查计划对话框 -->
+    <el-dialog v-model="planDialogVisible" :title="editingPlanId ? '编辑复查计划' : '创建复查计划'" width="600px">
       <el-form :model="planForm" label-width="120px">
-        <el-form-item label="随访频率" required>
+        <el-form-item label="复查频率" required>
           <el-select v-model="planForm.frequency" placeholder="请选择频率" style="width: 100%">
             <el-option label="每周" value="weekly" />
             <el-option label="每月" value="monthly" />
@@ -235,7 +240,7 @@
             <el-option label="每年" value="yearly" />
           </el-select>
         </el-form-item>
-        <el-form-item label="下次随访日期" required>
+        <el-form-item label="下次复查日期" required>
           <el-date-picker v-model="planForm.next_followup_date" type="date" placeholder="选择日期" style="width: 100%" />
         </el-form-item>
         <el-form-item label="负责医生">
@@ -245,7 +250,7 @@
           <el-input-number v-model="planForm.reminder_days" :min="1" :max="30" />
         </el-form-item>
         <el-form-item label="备注">
-          <el-input v-model="planForm.notes" type="textarea" :rows="2" placeholder="如随访地址、注意事项等" />
+          <el-input v-model="planForm.notes" type="textarea" :rows="2" placeholder="如复查地址、注意事项等" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -268,6 +273,7 @@ import { chronicDiseaseAPI } from '@/api/chronic-disease'
 import IndicatorRecordForm from '@/components/IndicatorRecordForm.vue'
 import DietRecommendations from '@/components/DietRecommendations.vue'
 import ExerciseRecommendations from '@/components/ExerciseRecommendations.vue'
+import InsulinEducation from '@/components/InsulinEducation.vue'
 import ComplicationManager from '@/components/ComplicationManager.vue'
 import ScheduleView from '@/views/medication/ScheduleView.vue'
 import ExportDialog from '@/components/ExportDialog.vue'
@@ -283,7 +289,7 @@ const activeTab = ref((route.query.tab as string) || 'indicators')
 const editDialogVisible = ref(false)
 const showExport = ref(false)
 
-// 随访计划
+// 复查计划
 const planDialogVisible = ref(false)
 const editingPlanId = ref<number | null>(null)
 const planForm = reactive({
@@ -631,7 +637,7 @@ const saveEdit = async () => {
   }
 }
 
-// ===== 随访计划 =====
+// ===== 复查计划 =====
 const resetPlanForm = () => {
   editingPlanId.value = null
   planForm.frequency = ''
@@ -658,7 +664,7 @@ const editPlan = (plan: any) => {
 
 const savePlan = async () => {
   if (!planForm.frequency || !planForm.next_followup_date) {
-    ElMessage.warning('请填写频率和下次随访日期')
+    ElMessage.warning('请填写频率和下次复查日期')
     return
   }
   const payload = {
@@ -684,7 +690,7 @@ const savePlan = async () => {
 }
 
 const deletePlan = (plan: any) => {
-  ElMessageBox.confirm('确认删除该随访计划？', '提示', { type: 'warning' }).then(async () => {
+  ElMessageBox.confirm('确认删除该复查计划？', '提示', { type: 'warning' }).then(async () => {
     try {
       await chronicDiseaseAPI.followupPlans.delete(diseaseId.value, plan.id)
       ElMessage.success('删除成功')
@@ -704,8 +710,8 @@ const getPlanStatus = (nextDate: string) => {
 const getPlanStatusText = (nextDate: string) => {
   const days = Math.floor((new Date(nextDate).getTime() - Date.now()) / 86400000)
   if (days < 0) return `已过期 ${Math.abs(days)} 天`
-  if (days === 0) return '今天随访'
-  return `${days} 天后随访`
+  if (days === 0) return '今天复查'
+  return `${days} 天后复查`
 }
 const formatFrequency = (freq: string) => {
   const map: Record<string, string> = { weekly: '每周', monthly: '每月', quarterly: '每季度', half_yearly: '每半年', yearly: '每年' }
