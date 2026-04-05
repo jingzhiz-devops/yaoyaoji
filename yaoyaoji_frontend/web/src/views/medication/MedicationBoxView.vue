@@ -2,7 +2,9 @@
   <div class="medication-box-container">
     <!-- 页面标题 -->
     <div class="page-hero">
-      <div class="hero-icon">💊</div>
+      <div class="hero-icon">
+        <el-icon :size="32"><FirstAidKit /></el-icon>
+      </div>
       <div class="hero-text">
         <h2>我的药箱</h2>
         <p>共 {{ medicationStore.myMedications.length }} 种药品</p>
@@ -566,8 +568,15 @@ async function handleRemove(id: number) {
 }
 
 .hero-icon {
-  font-size: 40px;
-  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
 .hero-text {
